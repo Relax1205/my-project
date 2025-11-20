@@ -1,55 +1,155 @@
 <!DOCTYPE html>
 <html lang="ru">
-<head> 
-    <meta charset="UTF-8"> 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-    <title>Мой сайт</title> 
-    <link rel="icon" href="assets/favicon.ico" type="image/x-icon">
-</head> 
-<body> 
-    <header> 
-        <div> 
-            <h1>МойСайт</h1> 
-        </div> 
-        <nav> 
-            <ul> 
-                <li><a href="#home">Главная</a></li> 
-                <li><a href="#about">О нас</a></li> 
-                <li><a href="#services">Услуги</a></li> 
-                <li><a href="#contact">Контакты</a></li> 
-            </ul> 
-        </nav> 
-    </header> 
-<main> 
-    <section id="home"> 
-        <h2>Добро пожаловать!</h2> 
-        <p>Это главная страница нашего веб-приложения.</p> 
-    </section> 
-    
-    <section id="about"> 
-        <h2>О нас</h2> 
-        <p>Мы компания, которая занимается созданием качественных веб-решений.</p> 
-    </section> 
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico" />
+  <title>Plant Pots & Co. — Мебель будущего</title>
+</head>
+<body>
 
-    <section id="services"> 
-        <h2>Наши услуги</h2> 
-        <ul> 
-            <li>Веб-разработка</li> 
-            <li>Дизайн</li> 
-            <li>Консультации</li> 
-        </ul> 
-    </section> 
+  <header>
+    <nav>
+      <ul>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#products">Products</a></li>
+        <li><a href="#about">About us</a></li>
+        <li><a href="#contact">Contact us</a></li>
+        <li><a href="#vacancies">Vacancies</a></li>
+      </ul>
+    </nav>
 
-    <section id="contact"> 
-        <h2>Контакты</h2> 
-        <p>Email: info@example.com</p> 
-        <p>Телефон: +7 (123) 456-78-90</p> 
-    </section> 
-    </main> 
+    <div class="header-icons">
+      <img src="assets/icons/Search.png" alt="Поиск" width="24">
+      <img src="assets/icons/Shopping--cart.png" alt="Корзина" width="24">
+      <img src="assets/icons/User--avatar.png" alt="Профиль" width="24">
+    </div>
+  </header>
 
-    <footer> 
-        <p>&copy; 2025 Сайт. Все права защищены.</p> 
-    </footer>
-</body> 
+  <main>
 
+    <section id="hero">
+      <h1>The furniture brand for the future, with timeless designs</h1>
+      <p>French flair, nice fonts, tasteful colors and a beautiful way to display things digitally.</p>
+      <a href="#collections">View collection</a>
+      <!-- Оставляем текущее изображение стула -->
+      <img src="assets/img/chair-right.png" alt="Элегантный деревянный стул" width="400">
+    </section>
+
+    <section id="features">
+      <h2>What makes our brand different</h2>
+      <ul>
+        <li>
+          <img src="assets/icons/Delivery.png" alt="Доставка" width="24">
+          Next day as standard
+        </li>
+        <li>
+          <img src="assets/icons/Sprout.png" alt="Ручная работа" width="24">
+          Handmade by true artisans
+        </li>
+        <li>
+          <img src="assets/icons/Purchase.png" alt="Цена" width="24">
+          Unbeatable prices
+        </li>
+        <li>
+          <img src="assets/icons/Checkmark--outline.png" alt="Упаковка" width="24">
+          100% recycled packaging
+        </li>
+      </ul>
+    </section>
+
+    <section id="new-arrivals">
+      <h2>New ceramics</h2>
+      <ul>
+        <li>
+          <img src="assets/img/black-chair.png" alt="Черный стул на голубом фоне" width="150">
+          The Dandy Chair — 2 250 ₽
+        </li>
+        <li>
+          <img src="assets/img/white-vase.png" alt="Белая керамическая ваза" width="150">
+          Rustic Vase Set — 1 550 ₽
+        </li>
+        <li>
+          <img src="assets/img/white-vase.png" alt="Белая керамическая ваза" width="150">
+          The Sky Vase — 1 250 ₽
+        </li>
+        <li>
+          <img src="assets/img/lamp.png" alt="Подвесной светильник" width="150">
+          The Lucy Lamp — 3 990 ₽
+        </li>
+      </ul>
+      <a href="#collections">View collection</a>
+      <img src="assets/img/sofa-with-plants.png" alt="Современный диван с декоративными подушками и растениями" width="600">
+    </section>
+
+    <section id="popular">
+      <h2>Our popular products</h2>
+      <ul>
+        <li>
+          <img src="assets/img/green-sofa-large.png" alt="Зелёный бархатный диван" width="150">
+          The Poplar Squada Sofa — 2 980 ₽
+        </li>
+        <li>
+          <img src="assets/img/black-chair.png" alt="Черный стул на голубом фоне" width="150">
+          The Dandy Chair — 2 250 ₽
+        </li>
+        <li>
+          <img src="assets/img/black-chair.png" alt="Черный стул на голубом фоне" width="150">
+          The Dandy Chair (2) — 2 250 ₽
+        </li>
+      </ul>
+      <a href="#collections">View collection</a>
+    </section>
+
+    <section id="newsletter">
+      <h2>Join the club and get the benefits</h2>
+      <p>Sign up for our newsletter and receive exclusive offers on new ranges, sales, pop-up stores and more.</p>
+      <form>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" placeholder="youremail@example.com" required>
+        <button type="submit">Sign up</button>
+      </form>
+    </section>
+
+    <section id="about">
+      <h2>From a studio in London to a global brand</h2>
+      <p>When we started Aoin, the idea was simple: make high-quality furniture affordable and available for the mass market.</p>
+      <p>Handmade and lovingly crafted furniture and homeware is what we live, breathe and design.</p>
+    </section>
+
+  </main>
+
+  <footer>
+    <div>
+      <h3>Get in touch</h3>
+      <ul>
+        <li><a href="#contact">Contact us</a></li>
+        <li><a href="#privacy">Privacy</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Categories</h3>
+      <ul>
+        <li><a href="#furniture">Furniture</a></li>
+        <li><a href="#crockery">Crockery</a></li>
+        <li><a href="#plant-pots">Plant pots</a></li>
+        <li><a href="#homeware">Homeware</a></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Our company</h3>
+      <ul>
+        <li><a href="#about">About us</a></li>
+        <li><a href="#vacancies">Vacancies</a></li>
+      </ul>
+    </div>
+    <div class="social-icons">
+      <img src="assets/icons/logo-skype.svg.png" alt="Skype" width="24">
+      <img src="assets/icons/logo-pinterest.svg.png" alt="Pinterest" width="24">
+      <img src="assets/icons/logo-linkedIn.png" alt="LinkedIn" width="24">
+    </div>
+    <p>&copy; 2025 Plant Pots & Co. All rights reserved.</p>
+  </footer>
+
+</body>
 </html>
