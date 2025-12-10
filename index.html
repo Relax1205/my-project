@@ -6,30 +6,42 @@
   <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="styles/style.css" />
+  <link rel="stylesheet" href="styles/mobile.css" media="screen and (max-width: 1024px)">
   <title>Plant Pots & Co. — Мебель будущего</title>
 </head>
 <body>
 
   <header class="header" id="home">
-    <nav class="header__nav">
-      <ul class="header__nav-list">
-        <li><a class="header__nav-link" href="#home">Home</a></li>
-        <li><a class="header__nav-link" href="#products">Products</a></li>
-        <li><a class="header__nav-link" href="#about">About us</a></li>
-        <li><a class="header__nav-link" href="#contact">Contact us</a></li>
-        <li><a class="header__nav-link" href="#vacancies">Vacancies</a></li>
-      </ul>
-    </nav>
+    <div class="container">
+      <div class="header__inner">
+        <a href="#home" class="logo">Plant Pots & Co.</a>
 
-    <div class="header__icons">
-      <img src="assets/icons/Search.png" alt="Поиск" width="24">
-      <img src="assets/icons/Shopping--cart.png" alt="Корзина" width="24">
-      <img src="assets/icons/User--avatar.png" alt="Профиль" width="24">
+        <button class="menu-toggle" id="menuToggle" aria-label="Открыть меню" aria-expanded="false">
+          <span class="menu-toggle__line"></span>
+          <span class="menu-toggle__line"></span>
+          <span class="menu-toggle__line"></span>
+        </button>
+
+        <nav class="nav" id="mainNav">
+          <ul class="nav__list">
+            <li class="nav__item"><a class="nav__link" href="#home">Home</a></li>
+            <li class="nav__item"><a class="nav__link" href="#products">Products</a></li>
+            <li class="nav__item"><a class="nav__link" href="#about">About us</a></li>
+            <li class="nav__item"><a class="nav__link" href="#contact">Contact us</a></li>
+            <li class="nav__item"><a class="nav__link" href="#vacancies">Vacancies</a></li>
+          </ul>
+        </nav>
+
+        <div class="header__icons desktop-only">
+          <img src="assets/icons/Search.png" alt="Поиск" width="24">
+          <img src="assets/icons/Shopping--cart.png" alt="Корзина" width="24">
+          <img src="assets/icons/User--avatar.png" alt="Профиль" width="24">
+        </div>
+      </div>
     </div>
   </header>
 
   <main>
-
     <section class="hero" id="hero">
       <h1 class="hero__title">The furniture brand for the future, with timeless designs</h1>
       <p class="hero__subtitle">French flair, nice fonts, tasteful colors and a beautiful way to display things digitally.</p>
@@ -143,7 +155,6 @@
       <p class="about__text">When we started Aoin, the idea was simple: make high-quality furniture affordable and available for the mass market.</p>
       <p class="about__text">Handmade and lovingly crafted furniture and homeware is what we live, breathe and design.</p>
     </section>
-
   </main>
 
   <footer class="footer">
@@ -178,5 +189,8 @@
     <p class="footer__copyright">&copy; 2025 Plant Pots & Co. All rights reserved.</p>
   </footer>
 
+  <button class="scroll-top" id="scrollTop" aria-label="Наверх">↑</button>
+
+  <script src="scripts/menu.js"></script>
 </body>
 </html>
