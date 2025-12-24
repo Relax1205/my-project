@@ -3,194 +3,197 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" type="image/x-icon" href="assets/icons/favicon.ico" />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-  <link rel="stylesheet" href="styles/style.css" />
-  <link rel="stylesheet" href="styles/mobile.css" media="screen and (max-width: 1024px)">
-  <title>Plant Pots & Co. — Мебель будущего</title>
+  <title>CodeStart Academy — Онлайн-курсы по программированию</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-o9s4qZnK4eUeM7y6q1KkUQxH2sMh7J8N+6r7Kx0VqY2e7d7aXjXf6qj+6x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2s5x+9s4x5r+3s3q3x+5e+2......" crossorigin="anonymous" referrerpolicy="no-referrer" />
 </head>
 <body>
 
-  <header class="header" id="home">
+  <header class="navbar is-fixed-top is-light" role="navigation" aria-label="основная навигация">
     <div class="container">
-      <div class="header__inner">
-        <a href="#home" class="logo">Plant Pots & Co.</a>
-
-        <button class="menu-toggle" id="menuToggle" aria-label="Открыть меню" aria-expanded="false">
-          <span class="menu-toggle__line"></span>
-          <span class="menu-toggle__line"></span>
-          <span class="menu-toggle__line"></span>
-        </button>
-
-        <nav class="nav" id="mainNav">
-          <ul class="nav__list">
-            <li class="nav__item"><a class="nav__link" href="#home">Home</a></li>
-            <li class="nav__item"><a class="nav__link" href="#products">Products</a></li>
-            <li class="nav__item"><a class="nav__link" href="#about">About us</a></li>
-            <li class="nav__item"><a class="nav__link" href="#contact">Contact us</a></li>
-            <li class="nav__item"><a class="nav__link" href="#vacancies">Vacancies</a></li>
-          </ul>
-        </nav>
-
-        <div class="header__icons desktop-only">
-          <img src="assets/icons/Search.png" alt="Поиск" width="24">
-          <img src="assets/icons/Shopping--cart.png" alt="Корзина" width="24">
-          <img src="assets/icons/User--avatar.png" alt="Профиль" width="24">
+      <div class="navbar-brand">
+        <a class="navbar-item has-text-weight-bold is-size-5" href="#home">
+          CodeStart Academy
+        </a>
+        <a role="button" class="navbar-burger" aria-label="меню" aria-expanded="false" data-target="navbarMenu">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+      </div>
+      <div id="navbarMenu" class="navbar-menu">
+        <div class="navbar-end">
+          <a class="navbar-item" href="#home">Главная</a>
+          <a class="navbar-item" href="#courses">Курсы</a>
+          <a class="navbar-item" href="#about">О нас</a>
+          <a class="navbar-item" href="#testimonials">Отзывы</a>
+          <a class="navbar-item" href="#contact">Контакты</a>
         </div>
       </div>
     </div>
   </header>
 
-  <main>
-    <section class="hero" id="hero">
-      <h1 class="hero__title">The furniture brand for the future, with timeless designs</h1>
-      <p class="hero__subtitle">French flair, nice fonts, tasteful colors and a beautiful way to display things digitally.</p>
-      <a class="hero__btn" href="#collections">View collection</a>
-      <img class="hero__image" src="assets/img/chair-right.png" alt="Элегантный деревянный стул" width="400">
-    </section>
-
-    <section class="features" id="features">
-      <h2 class="features__title">What makes our brand different</h2>
-      <ul class="features__list">
-        <li class="features__item">
-          <img src="assets/icons/Delivery.png" alt="Доставка" width="24">
-          Next day as standard
-        </li>
-        <li class="features__item">
-          <img src="assets/icons/Sprout.png" alt="Ручная работа" width="24">
-          Handmade by true artisans
-        </li>
-        <li class="features__item">
-          <img src="assets/icons/Purchase.png" alt="Цена" width="24">
-          Unbeatable prices
-        </li>
-        <li class="features__item">
-          <img src="assets/icons/Checkmark--outline.png" alt="Упаковка" width="24">
-          100% recycled packaging
-        </li>
-      </ul>
-    </section>
-
-    <section class="new-arrivals" id="new-arrivals">
-      <h2 class="new-arrivals__title">New ceramics</h2>
-      <ul class="new-arrivals__list">
-        <li class="new-arrivals__item">
-          <img src="assets/img/black-chair.png" alt="Черный стул на голубом фоне" width="150">
-          The Dandy Chair — 2 250 ₽
-        </li>
-        <li class="new-arrivals__item">
-          <img src="assets/img/white-vase.png" alt="Белая керамическая ваза" width="150">
-          Rustic Vase Set — 1 550 ₽
-        </li>
-        <li class="new-arrivals__item">
-          <img src="assets/img/white-vase.png" alt="Белая керамическая ваза" width="150">
-          The Sky Vase — 1 250 ₽
-        </li>
-        <li class="new-arrivals__item">
-          <img src="assets/img/lamp.png" alt="Подвесной светильник" width="150">
-          The Lucy Lamp — 3 990 ₽
-        </li>
-      </ul>
-
-      <img class="new-arrivals__image-large" src="assets/img/sofa-with-plants.png" alt="Современный диван с декоративными подушками и растениями" width="600">
-      <a class="new-arrivals__btn" href="#collections">View collection</a>
-    </section>
-
-    <section class="popular" id="popular">
-      <h2 class="popular__title">Our popular products</h2>
-      <ul class="popular__list">
-        <li class="popular__item">
-          <img src="assets/img/green-sofa-large.png" alt="Зелёный бархатный диван" width="150">
-          The Poplar Squada Sofa — 2 980 ₽
-        </li>
-        <li class="popular__item">
-          <img src="assets/img/black-chair.png" alt="Черный стул на голубом фоне" width="150">
-          The Dandy Chair — 2 250 ₽
-        </li>
-        <li class="popular__item">
-          <img src="assets/img/black-chair.png" alt="Черный стул на голубом фоне" width="150">
-          The Dandy Chair (2) — 2 250 ₽
-        </li>
-      </ul>
-      <a class="popular__btn" href="#collections">View collection</a>
-    </section>
-
-    <section class="masonry" id="masonry">
-      <h2 class="masonry__title">Inspiration Gallery</h2>
-      <div class="masonry__container">
-        <article class="masonry__item masonry__item--short">
-          <img src="assets/img/white-vase.png" alt="Ваза" width="120">
-          <p>Minimal vase</p>
-        </article>
-        <article class="masonry__item masonry__item--tall">
-          <img src="assets/img/sofa-with-plants.png" alt="Диван" width="120">
-          <p>Styling your living room with plants and soft textures.</p>
-        </article>
-        <article class="masonry__item">
-          <img src="assets/img/lamp.png" alt="Светильник" width="120">
-          <p>Lucy lamp in action</p>
-        </article>
-        <article class="masonry__item masonry__item--very-tall">
-          <img src="assets/img/chair-right.png" alt="Стул" width="120">
-          <p>Timeless wooden chair — perfect for dining, working or just sitting thoughtfully.</p>
-        </article>
-        <article class="masonry__item masonry__item--short">
-          <img src="assets/img/black-chair.png" alt="Черный стул" width="120">
-          <p>Dandy elegance</p>
-        </article>
+  <section class="hero is-medium is-primary" id="home">
+    <div class="hero-body">
+      <div class="container has-text-centered">
+        <h1 class="title is-1">
+          Стань разработчиком за 6 месяцев — даже если начинаешь с нуля
+        </h1>
+        <p class="subtitle is-4">
+          Практические курсы от инженеров с опытом в Яндексе, Тинькофф и GitHub.
+          Реальные проекты, менторская поддержка, помощь с трудоустройством.
+        </p>
+        <a class="button is-large is-light is-rounded" href="#signup">
+          Начать бесплатно
+        </a>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="newsletter" id="newsletter">
-      <h2 class="newsletter__title">Join the club and get the benefits</h2>
-      <p class="newsletter__subtitle">Sign up for our newsletter and receive exclusive offers on new ranges, sales, pop-up stores and more.</p>
-      <form class="newsletter__form">
-        <input class="newsletter__input" type="email" id="email" name="email" placeholder="youremail@example.com" required>
-        <button class="newsletter__submit" type="submit">Sign up</button>
+  <section class="section" id="about">
+    <div class="container">
+      <h2 class="title has-text-centered is-3">Как устроен курс?</h2>
+      <div class="columns is-vcentered">
+        <div class="column is-half">
+          <ul>
+            <li><strong>3 уровня:</strong> Beginner → Junior → Ready for Job</li>
+            <li><strong>Еженедельные менторские сессии</strong> с код-ревью</li>
+            <li><strong>Портфолио из 5 реальных проектов</strong> (включая DevOps и full-stack)</li>
+            <li><strong>Поддержка 24/7</strong> в чате с наставниками</li>
+          </ul>
+        </div>
+        <div class="column is-half has-text-centered">
+          <figure class="image is-256x256 mx-auto">
+            <i class="fas fa-laptop-code fa-5x has-text-primary"></i>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section has-background-light" id="courses">
+    <div class="container">
+      <h2 class="title has-text-centered is-3 has-text-black">Наши курсы</h2>
+      <div class="columns is-multiline is-centered">
+        <div class="column is-4-tablet is-5-mobile">
+          <div class="card">
+            <div class="card-content has-text-centered">
+              <p class="title is-5">Backend на Python</p>
+              <p>Flask, FastAPI, PostgreSQL, Docker, CI/CD</p>
+            </div>
+          </div>
+        </div>
+        <div class="column is-4-tablet is-5-mobile">
+          <div class="card">
+            <div class="card-content has-text-centered">
+              <p class="title is-5">DevOps-инженер</p>
+              <p>Kubernetes, Terraform, Ansible, GitLab CI</p>
+            </div>
+          </div>
+        </div>
+        <div class="column is-4-tablet is-5-mobile">
+          <div class="card">
+            <div class="card-content has-text-centered">
+              <p class="title is-5">Full-stack на Java</p>
+              <p>Spring Boot, React, REST API, JPA</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="testimonials">
+    <div class="container">
+      <h2 class="title has-text-centered is-3 ">Что говорят студенты</h2>
+      <div class="columns is-multiline is-centered">
+        <div class="column is-5-tablet">
+          <div class="message is-primary">
+            <div class="message-body">
+              <p>«За 4 месяца собрала портфолио, прошла 3 собеседования и получила офер на 120К»</p>
+              <p class="has-text-right mt-2"><strong>— Анна, Москва</strong></p>
+            </div>
+          </div>
+        </div>
+        <div class="column is-5-tablet">
+          <div class="message is-info">
+            <div class="message-body">
+              <p>«Перешёл с поддержки в DevOps. Ментор помог настроить кластер и объяснил, как работают облака»</p>
+              <p class="has-text-right mt-2"><strong>— Дмитрий, Екатеринбург</strong></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section has-background-primary" id="signup">
+    <div class="container has-text-centered">
+      <h2 class="title is-3 has-text-white">Получи бесплатный урок и чек-лист<br>«Junior Developer Roadmap»</h2>
+      <form class="mt-4">
+        <div class="field is-grouped is-grouped-centered">
+          <div class="control">
+            <input class="input" type="email" placeholder="you@example.com" required />
+          </div>
+          <div class="control">
+            <button class="button is-light is-rounded" type="submit">Получить урок</button>
+          </div>
+        </div>
       </form>
-    </section>
+    </div>
+  </section>
 
-    <section class="about" id="about">
-      <h2 class="about__title">From a studio in London to a global brand</h2>
-      <p class="about__text">When we started Aoin, the idea was simple: make high-quality furniture affordable and available for the mass market.</p>
-      <p class="about__text">Handmade and lovingly crafted furniture and homeware is what we live, breathe and design.</p>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="footer__col">
-      <h3 class="footer__title">Get in touch</h3>
-      <ul class="footer__list">
-        <li><a class="footer__link" href="#contact">Contact us</a></li>
-        <li><a class="footer__link" href="#privacy">Privacy</a></li>
-      </ul>
+  <footer class="footer" id="contact">
+    <div class="container">
+      <div class="columns">
+        <div class="column is-4">
+          <h3 class="title is-5">CodeStart Academy</h3>
+          <p>Онлайн-курсы для тех, кто хочет войти в IT и стать востребованным разработчиком.</p>
+        </div>
+        <div class="column is-2">
+          <h4 class="title is-6">Контакты</h4>
+          <ul>
+            <li><a href="mailto:hello@codestart.academy">hello@codestart.academy</a></li>
+            <li><a href="https://t.me/codestart_academy" target="_blank">Telegram</a></li>
+          </ul>
+        </div>
+        <div class="column is-2">
+          <h4 class="title is-6">Соцсети</h4>
+          <div class="field is-grouped">
+            <p class="control">
+              <a href="https://github.com/codestart" target="_blank" class="button is-small is-white">
+                <i class="fab fa-github"></i>
+              </a>
+            </p>
+            <p class="control">
+              <a href="https://linkedin.com/company/codestart" target="_blank" class="button is-small is-white">
+                <i class="fab fa-linkedin-in"></i>
+              </a>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="has-text-centered mt-5">
+        <p>&copy; 2025 CodeStart Academy. Все права защищены.</p>
+      </div>
     </div>
-    <div class="footer__col">
-      <h3 class="footer__title">Categories</h3>
-      <ul class="footer__list">
-        <li><a class="footer__link" href="#furniture">Furniture</a></li>
-        <li><a class="footer__link" href="#crockery">Crockery</a></li>
-        <li><a class="footer__link" href="#plant-pots">Plant pots</a></li>
-        <li><a class="footer__link" href="#homeware">Homeware</a></li>
-      </ul>
-    </div>
-    <div class="footer__col">
-      <h3 class="footer__title">Our company</h3>
-      <ul class="footer__list">
-        <li><a class="footer__link" href="#about">About us</a></li>
-        <li><a class="footer__link" href="#vacancies">Vacancies</a></li>
-      </ul>
-    </div>
-    <div class="footer__social">
-      <img src="assets/icons/logo-skype.svg.png" alt="Skype" width="24">
-      <img src="assets/icons/logo-pinterest.svg.png" alt="Pinterest" width="24">
-      <img src="assets/icons/logo-linkedIn.png" alt="LinkedIn" width="24">
-    </div>
-    <p class="footer__copyright">&copy; 2025 Plant Pots & Co. All rights reserved.</p>
   </footer>
 
-  <button class="scroll-top" id="scrollTop" aria-label="Наверх">↑</button>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+      if ($navbarBurgers.length > 0) {
+        $navbarBurgers.forEach(el => {
+          el.addEventListener('click', () => {
+            const target = el.dataset.target;
+            const $target = document.getElementById(target);
+            el.classList.toggle('is-active');
+            $target.classList.toggle('is-active');
+          });
+        });
+      }
+    });
+  </script>
 
-  <script src="scripts/menu.js"></script>
 </body>
 </html>
