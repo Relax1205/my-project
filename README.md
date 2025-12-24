@@ -2,5 +2,5 @@
 
 - **Тема**: CodeStart Academy
 - **Фреймворк**: Bulma
-- **GitHub Pages**: []
+- **GitHub Pages**: [https://relax1205.github.io/my-project/]
 ![Одностраничный лендинг](Одностраничный_лендинг.png)
