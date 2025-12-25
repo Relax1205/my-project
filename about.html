@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>О нас — CodeStart Academy</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="navbar is-fixed-top is-light" role="navigation" aria-label="основная навигация">
+    <div class="container">
+      <div class="navbar-brand">
+        <a class="navbar-item has-text-weight-bold is-size-5" href="index.html">CodeStart Academy</a>
+        <a role="button" class="navbar-burger" aria-label="меню" aria-expanded="false" data-target="navbarMenu">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+      </div>
+      <div id="navbarMenu" class="navbar-menu">
+        <div class="navbar-end">
+          <a class="navbar-item" href="index.html">Главная</a>
+          <a class="navbar-item" href="courses.html">Курсы</a>
+          <a class="navbar-item is-active" href="about.html">О нас</a>
+          <a class="navbar-item" href="testimonials.html">Отзывы</a>
+          <a class="navbar-item" href="contacts.html">Контакты</a>
+          <a class="navbar-item" href="faq.html">FAQ</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="section" style="margin-top: 6rem;">
+    <div class="container">
+      <h1 class="title has-text-centered is-2">О нас</h1>
+      <p class="subtitle has-text-centered is-5">EdTech-проект, помогающий новичкам освоить программирование с нуля</p>
+
+      <div class="columns is-vcentered mt-6">
+        <div class="column is-half">
+          <div class="content">
+            <p>
+              <strong>CodeStart Academy</strong> — это онлайн-школа программирования, основанная в 2013 году.
+              Мы начинали как небольшой партнёрский проект, мечтая сделать обучение коду доступным для каждого.
+              Сегодня мы помогаем студентам по всему миру освоить востребованные IT-навыки — от основ C/C++ до современных DevOps-практик.
+            </p>
+            <p>
+              Наша миссия — не просто научить писать код, а подготовить настоящих инженеров, готовых к работе в реальных командах.
+            </p>
+          </div>
+        </div>
+        <div class="column is-half has-text-centered">
+          <figure class="image is-256x256 mx-auto">
+            <i class="fas fa-graduation-cap fa-5x has-text-primary"></i>
+          </figure>
+        </div>
+      </div>
+
+      <div class="columns mt-6">
+        <div class="column">
+          <div class="box has-text-centered">
+            <h3 class="title is-4">С 2013 года</h3>
+            <p class="subtitle is-6">Более 10 лет в EdTech</p>
+          </div>
+        </div>
+        <div class="column">
+          <div class="box has-text-centered">
+            <h3 class="title is-4">2–10 человек</h3>
+            <p class="subtitle is-6">Команда экспертов</p>
+          </div>
+        </div>
+        <div class="column">
+          <div class="box has-text-centered">
+            <h3 class="title is-4">C / C++ / Java / DevOps</h3>
+            <p class="subtitle is-6">Акцент на фундамент</p>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="title is-3 mt-6">Как устроен наш подход?</h2>
+      <div class="content">
+        <ul>
+          <li><strong>Интерактивное обучение</strong> — теория сразу закрепляется практикой в браузере.</li>
+          <li><strong>Курс от новичка до Junior</strong> — 3 уровня: Beginner → Junior → Ready for Job.</li>
+          <li><strong>Реальные проекты</strong> — портфолио из 5+ проектов, включая full-stack и DevOps-решения.</li>
+          <li><strong>Менторская поддержка</strong> — еженедельные сессии и 24/7 чат с наставниками.</li>
+          <li><strong>Помощь с трудоустройством</strong> — резюме, собеседования, стажировки.</li>
+        </ul>
+      </div>
+
+      <div class="notification is-info mt-5">
+        <p class="has-text-centered">
+          <i class="fas fa-lightbulb"></i> 
+          <strong>Мы верим:</strong> программирование — это навык, доступный каждому, кто готов учиться.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container has-text-centered">
+      <p>&copy; 2025 CodeStart Academy. Все права защищены.</p>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+      if ($navbarBurgers.length > 0) {
+        $navbarBurgers.forEach(el => {
+          el.addEventListener('click', () => {
+            const target = el.dataset.target;
+            const $target = document.getElementById(target);
+            el.classList.toggle('is-active');
+            $target.classList.toggle('is-active');
+          });
+        });
+      }
+    });
+  </script>
+</body>
+</html>

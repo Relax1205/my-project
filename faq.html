@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FAQ — CodeStart Academy</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    .accordion-item {
+      margin-bottom: 1rem;
+    }
+    .accordion-content {
+      display: none;
+      padding: 1.25rem;
+      border-top: 1px solid #dbdbdb;
+    }
+    .accordion-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="navbar is-fixed-top is-light" role="navigation" aria-label="основная навигация">
+    <div class="container">
+      <div class="navbar-brand">
+        <a class="navbar-item has-text-weight-bold is-size-5" href="index.html">CodeStart Academy</a>
+        <a role="button" class="navbar-burger" aria-label="меню" aria-expanded="false" data-target="navbarMenu">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </a>
+      </div>
+      <div id="navbarMenu" class="navbar-menu">
+        <div class="navbar-end">
+          <a class="navbar-item" href="index.html">Главная</a>
+          <a class="navbar-item" href="courses.html">Курсы</a>
+          <a class="navbar-item" href="about.html">О нас</a>
+          <a class="navbar-item" href="testimonials.html">Отзывы</a>
+          <a class="navbar-item" href="contacts.html">Контакты</a>
+          <a class="navbar-item is-active" href="faq.html">FAQ</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="section" style="margin-top: 6rem;">
+    <div class="container">
+      <h1 class="title has-text-centered">Часто задаваемые вопросы</h1>
+
+      <div class="accordion" id="faqAccordion">
+        <!-- Вопрос 1 -->
+        <div class="accordion-item box">
+          <button class="button is-fullwidth has-text-left has-text-weight-semibold" data-toggle="1">
+            Как начать обучение?
+          </button>
+          <div class="accordion-content" id="content-1">
+            <p>Зарегистрируйтесь на сайте, выберите курс и начните с бесплатного вводного урока. Вся учебная платформа доступна сразу после регистрации.</p>
+          </div>
+        </div>
+
+        <!-- Вопрос 2 -->
+        <div class="accordion-item box">
+          <button class="button is-fullwidth has-text-left has-text-weight-semibold" data-toggle="2">
+            Сколько длится курс?
+          </button>
+          <div class="accordion-content" id="content-2">
+            <p>Каждый курс рассчитан на 4–6 месяцев при нагрузке 10–15 часов в неделю. Вы можете учиться в своём темпе — дедлайнов нет.</p>
+          </div>
+        </div>
+
+        <!-- Вопрос 3 -->
+        <div class="accordion-item box">
+          <button class="button is-fullwidth has-text-left has-text-weight-semibold" data-toggle="3">
+            Есть ли поддержка менторов?
+          </button>
+          <div class="accordion-content" id="content-3">
+            <p>Да! Все студенты получают еженедельные сессии с ментором, проверку домашних заданий и доступ к закрытому чату с наставниками 24/7.</p>
+          </div>
+        </div>
+
+        <!-- Вопрос 4 -->
+        <div class="accordion-item box">
+          <button class="button is-fullwidth has-text-left has-text-weight-semibold" data-toggle="4">
+            Помогаете ли с трудоустройством?
+          </button>
+          <div class="accordion-content" id="content-4">
+            <p>Обязательно. Мы помогаем составить резюме, подготовиться к собеседованиям и отправляем лучших студентов на стажировки в партнёрские компании.</p>
+          </div>
+        </div>
+
+        <!-- Вопрос 5 -->
+        <div class="accordion-item box">
+          <button class="button is-fullwidth has-text-left has-text-weight-semibold" data-toggle="5">
+            Можно ли оплатить курс в рассрочку?
+          </button>
+          <div class="accordion-content" id="content-5">
+            <p>Да, доступна рассрочка на 3 или 6 месяцев без процентов через наших партнёров.</p>
+          </div>
+        </div>
+
+        <!-- Вопрос 6 -->
+        <div class="accordion-item box">
+          <button class="button is-fullwidth has-text-left has-text-weight-semibold" data-toggle="6">
+            Какие технологии вы преподаёте?
+          </button>
+          <div class="accordion-content" id="content-6">
+            <p>Мы фокусируемся на востребованных технологиях: Python (Flask/FastAPI), Java (Spring Boot), DevOps (Docker, Kubernetes, Terraform), Git, CI/CD и базы данных.</p>
+          </div>
+        </div>
+
+        <!-- Вопрос 7 -->
+        <div class="accordion-item box">
+          <button class="button is-fullwidth has-text-left has-text-weight-semibold" data-toggle="7">
+            Нужны ли предварительные знания?
+          </button>
+          <div class="accordion-content" id="content-7">
+            <p>Нет! Наши курсы начинаются с нуля. Достаточно базовых навыков работы с компьютером и желания учиться.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container has-text-centered">
+      <p>&copy; 2025 CodeStart Academy. Все права защищены.</p>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Navbar burger
+      const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+      if ($navbarBurgers.length > 0) {
+        $navbarBurgers.forEach(el => {
+          el.addEventListener('click', () => {
+            const target = el.dataset.target;
+            const $target = document.getElementById(target);
+            el.classList.toggle('is-active');
+            $target.classList.toggle('is-active');
+          });
+        });
+      }
+
+      // FAQ accordion
+      const buttons = document.querySelectorAll('[data-toggle]');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-toggle');
+          const content = document.getElementById(`content-${id}`);
+          content.classList.toggle('active');
+        });
+      });
+    });
+  </script>
+</body>
+</html>
