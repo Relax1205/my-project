@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Задание 3</title>
+  <style>
+    .item { 
+      padding: 10px; 
+      margin: 5px 0; 
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .highlight { 
+      background-color: yellow; 
+      font-weight: bold;
+    }
+    .active { 
+      border-left: 4px solid #4CAF50; 
+    }
+    #total { 
+      margin-top: 15px; 
+      font-size: 1.2em; 
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h2>Товары</h2>
+  <div id="products">
+    <div class="item" data-price="100">Товар 1</div>
+    <div class="item active" data-price="200">Товар 2</div>
+    <div class="item" data-price="150">Товар 3</div>
+  </div>
+  <div id="total"></div>
+  <script src="script3.js"></script>
+</body>
+</html>
