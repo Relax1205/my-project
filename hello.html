@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Приветствие</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        input, button { padding: 10px; font-size: 16px; margin: 5px 0; }
+        #greeting { margin-top: 15px; font-weight: bold; color: #2c3e50; }
+    </style>
+</head>
+<body>
+    <h2>Приветствие</h2>
+    <input type="text" id="name-input" placeholder="Введите ваше имя">
+    <button id="greet-btn">Привет</button>
+    <div id="greeting"></div>
+
+    <script>
+        const input = document.querySelector('#name-input');
+        const button = document.querySelector('#greet-btn');
+        const greeting = document.querySelector('#greeting');
+        button.addEventListener('click', () => {
+            const name = input.value.trim();
+            if (name) {
+                greeting.textContent = `Привет, ${name}!`;
+            } else {
+                greeting.textContent = 'Пожалуйста, введите имя!';
+            }
+        });
+        input.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                button.click();
+            }
+        });
+    </script>
+</body>
+</html>
