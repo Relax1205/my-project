@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://github.com/Relax1205/my-project/framework",
+  "homepage": "https://github.com/Relax1205/my-project",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
