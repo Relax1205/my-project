@@ -1,0 +1,596 @@
+index.html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>book-manager</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+
+
+vite.config.js
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+
+export default defineConfig({
+  plugins: [vue()],
+  base: '/my-project/'
+})
+
+public/vite.svg
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true" role="img" class="iconify iconify--logos" width="31.88" height="32" preserveAspectRatio="xMidYMid meet" viewBox="0 0 256 257"><defs><linearGradient id="IconifyId1813088fe1fbc01fb466" x1="-.828%" x2="57.636%" y1="7.652%" y2="78.411%"><stop offset="0%" stop-color="#41D1FF"></stop><stop offset="100%" stop-color="#BD34FE"></stop></linearGradient><linearGradient id="IconifyId1813088fe1fbc01fb467" x1="43.376%" x2="50.316%" y1="2.242%" y2="89.03%"><stop offset="0%" stop-color="#FFEA83"></stop><stop offset="8.333%" stop-color="#FFDD35"></stop><stop offset="100%" stop-color="#FFA800"></stop></linearGradient></defs><path fill="url(#IconifyId1813088fe1fbc01fb466)" d="M255.153 37.938L134.897 252.976c-2.483 4.44-8.862 4.466-11.382.048L.875 37.958c-2.746-4.814 1.371-10.646 6.827-9.67l120.385 21.517a6.537 6.537 0 0 0 2.322-.004l117.867-21.483c5.438-.991 9.574 4.796 6.877 9.62Z"></path><path fill="url(#IconifyId1813088fe1fbc01fb467)" d="M185.432.063L96.44 17.501a3.268 3.268 0 0 0-2.634 3.014l-5.474 92.456a3.268 3.268 0 0 0 3.997 3.378l24.777-5.718c2.318-.535 4.413 1.507 3.936 3.838l-7.361 36.047c-.495 2.426 1.782 4.5 4.151 3.78l15.304-4.649c2.372-.72 4.652 1.36 4.15 3.788l-11.698 56.621c-.732 3.542 3.979 5.473 5.943 2.437l1.313-2.028l72.516-144.72c1.215-2.423-.88-5.186-3.54-4.672l-25.505 4.922c-2.396.462-4.435-1.77-3.759-4.114l16.646-57.705c.677-2.35-1.37-4.583-3.769-4.113Z"></path></svg>
+
+src/App.vue
+<template>
+  <div class="app">
+    <header>
+      <h1>Менеджер книг</h1>
+      <p>Управляй своей библиотекой</p>
+    </header>
+    <main>
+      <AddBookForm @add-book="addBook" />
+      <BookFilters
+        v-model:searchQuery="searchQuery"
+        v-model:filter="currentFilter"
+        :books="books"
+      />
+      <div v-if="filteredBooks.length === 0" class="empty-state">
+        <p>Книги не найдены:(</p>
+        <p>Добавьте первую книгу или измените параметры поиска</p>
+      </div>
+      <div v-else class="books-list">
+        <BookCard
+          v-for="book in filteredBooks"
+          :key="book.id"
+          :book="book"
+          @toggle="toggleBook(book.id)"
+          @delete="deleteBook(book.id)"
+          @rate="rateBook(book.id, $event)"
+        />
+      </div>
+    </main>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, watch } from 'vue'
+import AddBookForm from './components/AddBookForm.vue'
+import BookFilters from './components/BookFilters.vue'
+import BookCard from './components/BookCard.vue'
+
+// Состояние книг с загрузкой из localStorage
+const books = ref([])
+
+// Загрузка сохраненных книг
+const savedBooks = localStorage.getItem('books')
+if (savedBooks) {
+  books.value = JSON.parse(savedBooks)
+}
+
+// Состояния фильтрации
+const currentFilter = ref('all')
+const searchQuery = ref('')
+
+// Сохранение изменений в localStorage
+watch(
+  books,
+  (newBooks) => {
+    localStorage.setItem('books', JSON.stringify(newBooks))
+  },
+  { deep: true }
+)
+
+// Добавление книги
+const addBook = (bookData) => {
+  const newBook = {
+    id: Date.now(),
+    ...bookData,
+    completed: false,
+    rating: 0
+  }
+  books.value.push(newBook)
+}
+
+// Переключение статуса
+const toggleBook = (id) => {
+  const book = books.value.find((b) => b.id === id)
+  if (book) {
+    book.completed = !book.completed
+    if (!book.completed) {
+      book.rating = 0
+    }
+  }
+}
+
+// Оценка книги
+const rateBook = (id, rating) => {
+  const book = books.value.find((b) => b.id === id)
+  if (book && book.completed) {
+    book.rating = rating
+  }
+}
+
+// Удаление книги
+const deleteBook = (id) => {
+  if (confirm('Удалить книгу?')) {
+    books.value = books.value.filter((b) => b.id !== id)
+  }
+}
+
+// Фильтрация и поиск книг
+const filteredBooks = computed(() => {
+  return books.value
+    .filter((book) => {
+      if (currentFilter.value === 'unread') return !book.completed
+      if (currentFilter.value === 'read') return book.completed
+      return true
+    })
+    .filter((book) => {
+      if (!searchQuery.value) return true
+      const query = searchQuery.value.toLowerCase()
+      return (
+        book.title.toLowerCase().includes(query) ||
+        book.author.toLowerCase().includes(query)
+      )
+    })
+})
+</script>
+
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f0f2f5;
+  line-height: 1.6;
+}
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+header h1 {
+  font-size: 2.5em;
+  margin-bottom: 5px;
+}
+main {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+  font-size: 1.2em;
+}
+.empty-state p:first-child {
+  font-size: 3em;
+  margin-bottom: 20px;
+}
+.books-list {
+  margin-top: 20px;
+}
+</style>
+
+src/main.js
+import { createApp } from 'vue'
+import App from './App.vue'
+
+createApp(App).mount('#app')
+
+src/style.css
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+.card {
+  padding: 2em;
+}
+
+#app {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+
+src/components/AddBookForm.vue
+<template>
+  <form @submit.prevent="handleSubmit" class="add-form">
+    <h2>Добавить новую книгу</h2>
+    <div class="form-group">
+      <input
+        v-model="formData.title"
+        type="text"
+        placeholder="Название книги"
+        required
+      />
+    </div>
+    <div class="form-group">
+      <input
+        v-model="formData.author"
+        type="text"
+        placeholder="Автор"
+        required
+      />
+    </div>
+    <div class="form-group">
+      <select v-model="formData.genre" required>
+        <option value="">Выберите жанр</option>
+        <option value="Роман">Роман</option>
+        <option value="Фантастика">Фантастика</option>
+        <option value="Детектив">Детектив</option>
+        <option value="Научная">Научная</option>
+        <option value="Поэзия">Поэзия</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-submit">Добавить книгу</button>
+  </form>
+</template>
+
+<script setup>
+import { reactive } from 'vue'
+
+const emit = defineEmits(['add-book'])
+
+const formData = reactive({
+  title: '',
+  author: '',
+  genre: ''
+})
+
+const handleSubmit = () => {
+  emit('add-book', { ...formData })
+  // Очистка формы
+  formData.title = ''
+  formData.author = ''
+  formData.genre = ''
+}
+</script>
+
+<style scoped>
+.add-form {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+.add-form h2 {
+  margin-bottom: 15px;
+  color: #333;
+}
+.form-group {
+  margin-bottom: 15px;
+}
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1em;
+}
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+.btn-submit {
+  width: 100%;
+  padding: 12px;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1em;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.btn-submit:hover {
+  background: #45a049;
+}
+</style>
+
+src/components/BookCard.vue
+<template>
+  <div class="book-card" :class="{ completed: book.completed }">
+    <div class="book-info">
+      <h3>{{ book.title }}</h3>
+      <p class="author">{{ book.author }}</p>
+      <span class="genre">{{ book.genre }}</span>
+    </div>
+    <div class="book-actions">
+      <div v-if="book.completed" class="rating">
+        <span
+          v-for="star in 5"
+          :key="star"
+          @click="$emit('rate', star)"
+          class="star"
+        >
+          {{ star <= book.rating ? '★' : '☆' }}
+        </span>
+      </div>
+      <button
+        @click="$emit('toggle')"
+        :class="[
+          'btn',
+          book.completed ? 'btn-secondary' : 'btn-primary'
+        ]"
+      >
+        {{ book.completed ? 'Прочитано' : 'Отметить прочитанной' }}
+      </button>
+      <button @click="$emit('delete')" class="btn btn-danger">✕</button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+defineProps(['book'])
+defineEmits(['toggle', 'delete', 'rate'])
+</script>
+
+<style scoped>
+.book-card {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s;
+}
+.book-card.completed {
+  background: #f0f7f0;
+  opacity: 0.8;
+}
+.book-info {
+  flex: 1;
+}
+.book-info h3 {
+  margin-bottom: 4px;
+  color: #333;
+}
+.author {
+  color: #666;
+  font-size: 0.9em;
+  margin-bottom: 4px;
+}
+.genre {
+  background: #e0e0e0;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+}
+.book-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.rating {
+  display: flex;
+  gap: 2px;
+  margin-right: 10px;
+}
+.star {
+  font-size: 20px;
+  cursor: pointer;
+  color: gold;
+}
+.star:hover {
+  transform: scale(1.2);
+}
+.btn {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background 0.3s;
+}
+.btn-primary {
+  background: #4CAF50;
+  color: white;
+}
+.btn-primary:hover {
+  background: #45a049;
+}
+.btn-secondary {
+  background: #2196F3;
+  color: white;
+}
+.btn-secondary:hover {
+  background: #1e87db;
+}
+.btn-danger {
+  background: #f44336;
+  color: white;
+  padding: 8px 12px;
+}
+.btn-danger:hover {
+  background: #da190b;
+}
+</style>
+
+src/components/BookFilters.vue
+<template>
+  <div class="filters">
+    <div class="search">
+      <input
+        v-model="searchQuery"
+        type="text"
+        placeholder="Поиск по названию или автору..."
+      />
+    </div>
+    <div class="filter-buttons">
+      <button
+        v-for="option in filterOptions"
+        :key="option.value"
+        @click="$emit('update:filter', option.value)"
+        :class="['filter-btn', { active: filter === option.value }]"
+      >
+        {{ option.label }}
+      </button>
+    </div>
+    <div class="stats">
+      <p>
+        Всего: {{ total }} | Прочитано: {{ completed }} | Осталось: {{ total - completed }}
+      </p>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed } from 'vue'
+
+const props = defineProps(['filter', 'books'])
+defineEmits(['update:filter'])
+
+// defineModel доступен в Vue 3.3+
+const searchQuery = defineModel('searchQuery')
+
+const filterOptions = [
+  { value: 'all', label: 'Все' },
+  { value: 'unread', label: 'Непрочитанные' },
+  { value: 'read', label: 'Прочитанные' }
+]
+
+const total = computed(() => props.books.length)
+const completed = computed(() => props.books.filter(b => b.completed).length)
+</script>
+
+<style scoped>
+.filters {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+.search {
+  margin-bottom: 15px;
+}
+.search input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1em;
+}
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.filter-btn:hover {
+  background: #f0f0f0;
+}
+.filter-btn.active {
+  background: #4CAF50;
+  color: white;
+  border-color: #4CAF50;
+}
+.stats {
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+  color: #666;
+  font-size: 0.9em;
+}
+</style>
+

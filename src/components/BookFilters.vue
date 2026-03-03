@@ -1,26 +1,36 @@
 <template>
-  <div class="filters">
-    <div class="search">
+  <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
+    <div class="search flex-grow-1" style="min-width: 200px;">
       <input
         v-model="searchQuery"
         type="text"
+        class="form-control"
         placeholder="Поиск по названию или автору..."
       />
     </div>
-    <div class="filter-buttons">
-      <button
-        v-for="option in filterOptions"
-        :key="option.value"
-        @click="$emit('update:filter', option.value)"
-        :class="['filter-btn', { active: filter === option.value }]"
-      >
-        {{ option.label }}
-      </button>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <select v-model="sortBy" class="form-select" style="width: auto;">
+        <option value="date">По дате</option>
+        <option value="title">По названию</option>
+        <option value="rating">По рейтингу</option>
+      </select>
+
+      <div class="btn-group" role="group">
+        <button
+          v-for="option in filterOptions"
+          :key="option.value"
+          @click="$emit('update:filter', option.value)"
+          class="btn btn-sm"
+          :class="filter === option.value ? 'btn-dark' : 'btn-outline-secondary'"
+        >
+          {{ option.label }}
+        </button>
+      </div>
     </div>
-    <div class="stats">
-      <p>
-        Всего: {{ total }} | Прочитано: {{ completed }} | Осталось: {{ total - completed }}
-      </p>
+
+    <div class="stats small text-muted">
+      Всего: {{ total }} | Прочитано: {{ completed }}
     </div>
   </div>
 </template>
@@ -28,11 +38,11 @@
 <script setup>
 import { computed } from 'vue'
 
-const props = defineProps(['filter', 'books'])
-defineEmits(['update:filter'])
+const props = defineProps(['filter', 'books', 'sortBy'])
+const emit = defineEmits(['update:filter', 'update:sortBy'])
 
-// defineModel доступен в Vue 3.3+
 const searchQuery = defineModel('searchQuery')
+const sortBy = defineModel('sortBy')
 
 const filterOptions = [
   { value: 'all', label: 'Все' },
@@ -43,50 +53,3 @@ const filterOptions = [
 const total = computed(() => props.books.length)
 const completed = computed(() => props.books.filter(b => b.completed).length)
 </script>
-
-<style scoped>
-.filters {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
-}
-.search {
-  margin-bottom: 15px;
-}
-.search input {
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 1em;
-}
-.filter-buttons {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-}
-.filter-btn {
-  padding: 8px 16px;
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-.filter-btn:hover {
-  background: #f0f0f0;
-}
-.filter-btn.active {
-  background: #4CAF50;
-  color: white;
-  border-color: #4CAF50;
-}
-.stats {
-  padding-top: 15px;
-  border-top: 1px solid #eee;
-  color: #666;
-  font-size: 0.9em;
-}
-</style>
