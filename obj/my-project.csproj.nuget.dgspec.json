@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\redmi\\Documents\\my-project\\my-project.csproj": {}
+    "C:\\Users\\relax\\Documents\\my-project\\my-project.csproj": {}
   },
   "projects": {
-    "C:\\Users\\redmi\\Documents\\my-project\\my-project.csproj": {
+    "C:\\Users\\relax\\Documents\\my-project\\my-project.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\redmi\\Documents\\my-project\\my-project.csproj",
+        "projectUniqueName": "C:\\Users\\relax\\Documents\\my-project\\my-project.csproj",
         "projectName": "my-project",
-        "projectPath": "C:\\Users\\redmi\\Documents\\my-project\\my-project.csproj",
-        "packagesPath": "C:\\Users\\redmi\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\redmi\\Documents\\my-project\\obj\\",
+        "projectPath": "C:\\Users\\relax\\Documents\\my-project\\my-project.csproj",
+        "packagesPath": "C:\\Users\\relax\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\relax\\Documents\\my-project\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\redmi\\AppData\\Roaming\\NuGet\\NuGet.Config"
+          "C:\\Users\\relax\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net10.0"
@@ -43,12 +43,6 @@
       "frameworks": {
         "net10.0": {
           "targetAlias": "net10.0",
-          "dependencies": {
-            "Microsoft.AspNetCore.OpenApi": {
-              "target": "Package",
-              "version": "[10.0.5, )"
-            }
-          },
           "imports": [
             "net461",
             "net462",
