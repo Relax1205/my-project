@@ -13,9 +13,9 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\relax\\Documents\\my-project\\my-project.csproj",
-      "projectName": "my-project",
-      "projectPath": "C:\\Users\\relax\\Documents\\my-project\\my-project.csproj",
+      "projectUniqueName": "C:\\Users\\relax\\Documents\\my-project\\CampusRouteLab.csproj",
+      "projectName": "CampusRouteLab",
+      "projectPath": "C:\\Users\\relax\\Documents\\my-project\\CampusRouteLab.csproj",
       "packagesPath": "C:\\Users\\relax\\.nuget\\packages\\",
       "outputPath": "C:\\Users\\relax\\Documents\\my-project\\obj\\",
       "projectStyle": "PackageReference",

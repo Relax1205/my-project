@@ -1,0 +1,1781 @@
+CampusRouteLab.csproj
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>
+
+Program.cs
+using CampusRouteLab.Extensions;
+using CampusRouteLab.Middleware;
+using CampusRouteLab.Handlers;
+using CampusRouteLab.Services.Interfaces;
+using CampusRouteLab.Services;
+using Microsoft.AspNetCore.Routing;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// ✅ Регистрация всех сервисов через метод расширения
+builder.Services.AddCampusServices();
+
+var app = builder.Build();
+
+// ✅ Подключение custom middleware (до маршрутов!)
+app.UseRequestAudit();
+
+// ================= ROOT =================
+app.MapGet("/", () => Results.Json(new
+{
+    Name = "CampusRouteLab",
+    Description = "Diagnostic service for routing and DI demonstration",
+    Version = "1.0.0",
+    Endpoints = new[] 
+    { 
+        "/students", 
+        "/reports", 
+        "/portal", 
+        "/files",
+        "/routes",
+        "/diag/lifetimes"
+    }
+}))
+.WithName("Root");
+
+// ================= BUSINESS ROUTES =================
+
+// ✅ Вынесенный обработчик 1: Список всех групп
+app.MapGet("/students", EndpointHandlers.GetStudentsList)
+    .WithName("GetStudentsList");
+
+// ✅ Группа по имени (обязательный параметр)
+app.MapGet("/students/{group}", (string group, IStudentCatalogService catalog) =>
+{
+    var data = catalog.GetGroupByName(group);
+    return data is not null 
+        ? Results.Json(data) 
+        : Results.NotFound(new { Error = "Group not found", Group = group });
+})
+.WithName("GetStudentByGroup");
+
+// ✅ Вынесенный обработчик 2: Студент по ID
+app.MapGet("/students/{group}/{id}", EndpointHandlers.GetStudentById)
+    .WithName("GetStudentById");
+
+// ✅ Отчёт с необязательным параметром
+app.MapGet("/reports/{section?}", (string? section) =>
+{
+    var sec = string.IsNullOrEmpty(section) ? "overview" : section;
+    return Results.Json(new 
+    { 
+        Section = sec, 
+        Content = $"Report for {sec}",
+        ParameterUsed = !string.IsNullOrEmpty(section)
+    });
+})
+.WithName("GetReport");
+
+// ✅ Портал со значениями по умолчанию
+app.MapGet("/portal/{module=home}/{page=index}/{id?}", 
+    (string module, string page, int? id) =>
+{
+    return Results.Json(new
+    {
+        Module = module,
+        Page = page,
+        Id = id,
+        DefaultsUsed = new
+        {
+            ModuleDefault = module == "home",
+            PageDefault = page == "index",
+            IdDefault = id == null
+        }
+    });
+})
+.WithName("GetPortal");
+
+// ✅ Catch-all маршрут
+app.MapGet("/files/{**path}", (string path) =>
+    Results.Text($"Catch-all captured: {path}"))
+    .WithName("GetFiles");
+
+// ================= DIAGNOSTIC ROUTES =================
+
+// ✅ Список всех endpoint-ов
+app.MapGet("/routes", (EndpointDataSource dataSource) =>
+{
+    var routes = dataSource.Endpoints
+        .OfType<RouteEndpoint>()
+        .Select(e => new 
+        { 
+            Route = e.RoutePattern.RawText,
+            DisplayName = e.DisplayName ?? "Unnamed"
+        })
+        .OrderBy(r => r.Route)
+        .ToList();
+    
+    return Results.Json(new 
+    { 
+        TotalEndpoints = routes.Count, 
+        Routes = routes 
+    });
+})
+.WithName("GetRoutes");
+
+// ✅ Проверка жизненного цикла сервисов
+app.MapGet("/diag/lifetimes", (
+    IAppInfoService appInfo,
+    IRequestContextService reqContext,
+    ITransientMarkerService transient,
+    DiagnosticsReportService reportService) =>
+{
+    var direct = new
+    {
+        Singleton = appInfo.AppInstanceId,
+        Scoped = reqContext.RequestId,
+        Transient = transient.MarkerId,
+        Source = "Handler"
+    };
+    
+    var fromService = reportService.GetLifetimeReport();
+    
+    return Results.Json(new 
+    { 
+        Direct = direct, 
+        FromService = fromService,
+        Comparison = new
+        {
+            SingletonMatch = direct.Singleton == fromService.SingletonAppId,
+            ScopedMatch = direct.Scoped == fromService.ScopedRequestId,
+            TransientMatch = direct.Transient == fromService.TransientMarkerId
+        }
+    });
+})
+.WithName("GetLifetimes");
+
+// ✅ Проверка transient (два разрешения в одном запросе)
+app.MapGet("/diag/lifetimes/check", (IServiceProvider sp) =>
+{
+    var t1 = sp.GetRequiredService<ITransientMarkerService>();
+    var t2 = sp.GetRequiredService<ITransientMarkerService>();
+    
+    return Results.Json(new
+    {
+        First = t1.MarkerId,
+        Second = t2.MarkerId,
+        AreDifferent = t1.MarkerId != t2.MarkerId,
+        Explanation = "Transient services are created new each time"
+    });
+})
+.WithName("CheckLifetimes");
+
+// ✅ Получение сервиса через HttpContext.RequestServices
+app.MapGet("/diag/request-services", (HttpContext context) =>
+{
+    var svc = context.RequestServices.GetRequiredService<IRequestContextService>();
+    return Results.Json(new 
+    { 
+        RequestId = svc.RequestId,
+        Method = "HttpContext.RequestServices.GetRequiredService"
+    });
+})
+.WithName("GetRequestServices");
+
+// ✅ Получение singleton через app.Services
+app.MapGet("/diag/app-services", () =>
+{
+    var svc = app.Services.GetRequiredService<IAppInfoService>();
+    return Results.Json(new 
+    { 
+        AppInstanceId = svc.AppInstanceId, 
+        StartedAt = svc.StartedAt,
+        Method = "app.Services.GetRequiredService"
+    });
+})
+.WithName("GetAppServices");
+
+app.Run();
+
+~$чёт по практической работе 4_5.docx
+[Binary or non-text file]
+
+
+Отчёт по практической работе 4_5.docx
+[Binary or non-text file]
+
+
+ссылка_на_гит.txt
+https://github.com/Relax1205/my-project/tree/backend
+
+bin/Debug/net10.0/CampusRouteLab.deps.json
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "CampusRouteLab/1.0.0": {
+        "runtime": {
+          "CampusRouteLab.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "CampusRouteLab/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
+
+bin/Debug/net10.0/CampusRouteLab.dll
+[Binary or non-text file]
+
+
+bin/Debug/net10.0/CampusRouteLab.exe
+[Binary or non-text file]
+
+
+bin/Debug/net10.0/CampusRouteLab.pdb
+[Binary or non-text file]
+
+
+bin/Debug/net10.0/CampusRouteLab.runtimeconfig.json
+{
+  "runtimeOptions": {
+    "tfm": "net10.0",
+    "frameworks": [
+      {
+        "name": "Microsoft.NETCore.App",
+        "version": "10.0.0"
+      },
+      {
+        "name": "Microsoft.AspNetCore.App",
+        "version": "10.0.0"
+      }
+    ],
+    "configProperties": {
+      "System.GC.Server": true,
+      "System.Runtime.Serialization.EnableUnsafeBinaryFormatterSerialization": false
+    }
+  }
+}
+
+bin/Debug/net10.0/CampusRouteLab.staticwebassets.endpoints.json
+{"Version":1,"ManifestType":"Build","Endpoints":[]}
+
+Extensions/ServiceCollectionExtensions.cs
+namespace CampusRouteLab.Extensions;
+
+using Microsoft.Extensions.DependencyInjection;
+using CampusRouteLab.Services.Interfaces;
+using CampusRouteLab.Services.Implementations;
+using CampusRouteLab.Services;
+
+public static class ServiceCollectionExtensions
+{
+    public static IServiceCollection AddCampusServices(this IServiceCollection services)
+    {
+        services.AddSingleton<IAppInfoService, AppInfoService>();
+        services.AddSingleton<IStudentCatalogService, StudentCatalogService>();
+        
+        services.AddScoped<IRequestContextService, RequestContextService>();
+        
+        services.AddTransient<ITransientMarkerService, TransientMarkerService>();
+        services.AddTransient<DiagnosticsReportService>();
+        
+        return services;
+    }
+}
+
+Handlers/EndpointHandlers.cs
+using CampusRouteLab.Services.Interfaces;
+using CampusRouteLab.Models;
+
+namespace CampusRouteLab.Handlers;
+
+/// <summary>
+/// Вынесенные обработчики endpoint-ов
+/// ✅ Бонусные баллы за выделение логики в отдельные методы
+/// </summary>
+public static class EndpointHandlers
+{
+    /// <summary>
+    /// Обработчик 1: Список всех групп
+    /// </summary>
+    public static IResult GetStudentsList(IStudentCatalogService catalog)
+    {
+        var groups = catalog.GetAllGroups()
+            .Select(g => new
+            {
+                Group = g.Name,
+                StudentCount = g.StudentCount,
+                HasStudents = g.Students.Count > 0
+            });
+        
+        return Results.Json(groups);
+    }
+    
+    /// <summary>
+    /// Обработчик 2: Студент по ID с обработкой 404
+    /// </summary>
+    public static Task<IResult> GetStudentById(
+        string group,
+        int id,
+        IStudentCatalogService catalog,
+        ITransientMarkerService transient)
+    {
+        var student = catalog.GetStudent(group, id);
+        
+        if (student is null)
+        {
+            return Task.FromResult<IResult>(Results.NotFound(new 
+            { 
+                Error = "Student not found", 
+                Group = group, 
+                Id = id,
+                SearchedAt = DateTime.Now
+            }));
+        }
+        
+        return Task.FromResult<IResult>(Results.Json(new
+        {
+            Student = student,
+            TransientMarker = transient.MarkerId,
+            RetrievedAt = DateTime.Now
+        }));
+    }
+}
+
+Middleware/RequestAuditExtensions.cs
+namespace CampusRouteLab.Middleware;
+
+public static class RequestAuditExtensions
+{
+    /// <summary>
+    /// Метод расширения для подключения RequestAuditMiddleware
+    /// </summary>
+    public static IApplicationBuilder UseRequestAudit(this IApplicationBuilder app)
+    {
+        return app.UseMiddleware<RequestAuditMiddleware>();
+    }
+}
+
+Middleware/RequestAuditMiddleware.cs
+using CampusRouteLab.Services.Interfaces;
+
+namespace CampusRouteLab.Middleware;
+
+public class RequestAuditMiddleware
+{
+    private readonly RequestDelegate _next;
+    private readonly IAppInfoService _appInfo;
+    
+    /// <summary>
+    /// Конструктор middleware
+    /// ✅ Singleton-сервис можно внедрять в конструктор
+    /// ❌ Scoped-сервис НЕЛЬЗЯ внедрять в конструктор (будет создан один раз на всё приложение)
+    /// </summary>
+    public RequestAuditMiddleware(RequestDelegate next, IAppInfoService appInfo)
+    {
+        _next = next;
+        _appInfo = appInfo;
+    }
+    
+    /// <summary>
+    /// Метод обработки запроса
+    /// ✅ Scoped и Transient сервисы получаем через параметры метода InvokeAsync
+    /// </summary>
+    public async Task InvokeAsync(
+        HttpContext context,
+        IRequestContextService requestContext,
+        ITransientMarkerService transientMarker)
+    {
+        // Логирование ДО обработки запроса
+        if (context.Request.Path.StartsWithSegments("/diag"))
+        {
+            Console.WriteLine($"[DIAG BEFORE] RequestId={requestContext.RequestId} | Path={context.Request.Path}");
+        }
+        
+        // ✅ Регистрируем коллбэк для добавления заголовков
+        // Выполнится после обработки запроса, но до отправки ответа клиенту
+        context.Response.OnStarting(() =>
+        {
+            context.Response.Headers["X-App-Instance"] = _appInfo.AppInstanceId.ToString();
+            context.Response.Headers["X-Request-Id"] = requestContext.RequestId.ToString();
+            context.Response.Headers["X-Transient-Id"] = transientMarker.MarkerId.ToString();
+            return Task.CompletedTask;
+        });
+        
+        // Вызов следующего компонента конвейера
+        await _next(context);
+        
+        // Логирование ПОСЛЕ обработки запроса
+        if (context.Request.Path.StartsWithSegments("/diag"))
+        {
+            Console.WriteLine($"[DIAG AFTER] RequestId={requestContext.RequestId} | Status={context.Response.StatusCode}");
+        }
+    }
+}
+
+Models/Student.cs
+namespace CampusRouteLab.Models;
+
+public record Student(int Id, string Name, string GroupName);
+public record GroupInfo(string Name, int StudentCount, List<Student> Students);
+
+obj/CampusRouteLab.csproj.nuget.dgspec.json
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\relax\\Documents\\my-project\\CampusRouteLab.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\relax\\Documents\\my-project\\CampusRouteLab.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\relax\\Documents\\my-project\\CampusRouteLab.csproj",
+        "projectName": "CampusRouteLab",
+        "projectPath": "C:\\Users\\relax\\Documents\\my-project\\CampusRouteLab.csproj",
+        "packagesPath": "C:\\Users\\relax\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\relax\\Documents\\my-project\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\relax\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net10.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net10.0": {
+            "targetAlias": "net10.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "all"
+        },
+        "SdkAnalysisLevel": "10.0.200"
+      },
+      "frameworks": {
+        "net10.0": {
+          "targetAlias": "net10.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
+          "packagesToPrune": {
+            "Microsoft.AspNetCore": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
+            "Microsoft.AspNetCore.App": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Authentication": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Authentication.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Authentication.BearerToken": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Authentication.Cookies": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Authentication.Core": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Authentication.OAuth": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Authorization": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Authorization.Policy": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Components": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Components.Authorization": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Components.Endpoints": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Components.Forms": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Components.Server": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Components.Web": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Connections.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.CookiePolicy": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Cors": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Cryptography.Internal": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Cryptography.KeyDerivation": "(,10.0.32767]",
+            "Microsoft.AspNetCore.DataProtection": "(,10.0.32767]",
+            "Microsoft.AspNetCore.DataProtection.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.DataProtection.Extensions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Diagnostics": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Diagnostics.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Diagnostics.HealthChecks": "(,10.0.32767]",
+            "Microsoft.AspNetCore.HostFiltering": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Hosting": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Hosting.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Hosting.Server.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Html.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Http": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Http.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Http.Connections": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Http.Connections.Common": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Http.Extensions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Http.Features": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Http.Results": "(,10.0.32767]",
+            "Microsoft.AspNetCore.HttpLogging": "(,10.0.32767]",
+            "Microsoft.AspNetCore.HttpOverrides": "(,10.0.32767]",
+            "Microsoft.AspNetCore.HttpsPolicy": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Identity": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Localization": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Localization.Routing": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Metadata": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.ApiExplorer": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.Core": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.Cors": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.DataAnnotations": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.Formatters.Json": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.Formatters.Xml": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.Localization": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.Razor": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.RazorPages": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.TagHelpers": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Mvc.ViewFeatures": "(,10.0.32767]",
+            "Microsoft.AspNetCore.OutputCaching": "(,10.0.32767]",
+            "Microsoft.AspNetCore.RateLimiting": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Razor": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Razor.Runtime": "(,10.0.32767]",
+            "Microsoft.AspNetCore.RequestDecompression": "(,10.0.32767]",
+            "Microsoft.AspNetCore.ResponseCaching": "(,10.0.32767]",
+            "Microsoft.AspNetCore.ResponseCaching.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.ResponseCompression": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Rewrite": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Routing": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Routing.Abstractions": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Server.HttpSys": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Server.IIS": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Server.IISIntegration": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Server.Kestrel": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Server.Kestrel.Core": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Server.Kestrel.Transport.Quic": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets": "(,10.0.32767]",
+            "Microsoft.AspNetCore.Session": "(,10.0.32767]",
+            "Microsoft.AspNetCore.SignalR": "(,10.0.32767]",
+            "Microsoft.AspNetCore.SignalR.Common": "(,10.0.32767]",
+            "Microsoft.AspNetCore.SignalR.Core": "(,10.0.32767]",
+            "Microsoft.AspNetCore.SignalR.Protocols.Json": "(,10.0.32767]",
+            "Microsoft.AspNetCore.StaticAssets": "(,10.0.32767]",
+            "Microsoft.AspNetCore.StaticFiles": "(,10.0.32767]",
+            "Microsoft.AspNetCore.WebSockets": "(,10.0.32767]",
+            "Microsoft.AspNetCore.WebUtilities": "(,10.0.32767]",
+            "Microsoft.CSharp": "(,4.7.32767]",
+            "Microsoft.Extensions.Caching.Abstractions": "(,10.0.32767]",
+            "Microsoft.Extensions.Caching.Memory": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.Abstractions": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.Binder": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.CommandLine": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.EnvironmentVariables": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.FileExtensions": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.Ini": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.Json": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.KeyPerFile": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.UserSecrets": "(,10.0.32767]",
+            "Microsoft.Extensions.Configuration.Xml": "(,10.0.32767]",
+            "Microsoft.Extensions.DependencyInjection": "(,10.0.32767]",
+            "Microsoft.Extensions.DependencyInjection.Abstractions": "(,10.0.32767]",
+            "Microsoft.Extensions.Diagnostics": "(,10.0.32767]",
+            "Microsoft.Extensions.Diagnostics.Abstractions": "(,10.0.32767]",
+            "Microsoft.Extensions.Diagnostics.HealthChecks": "(,10.0.32767]",
+            "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": "(,10.0.32767]",
+            "Microsoft.Extensions.Features": "(,10.0.32767]",
+            "Microsoft.Extensions.FileProviders.Abstractions": "(,10.0.32767]",
+            "Microsoft.Extensions.FileProviders.Composite": "(,10.0.32767]",
+            "Microsoft.Extensions.FileProviders.Physical": "(,10.0.32767]",
+            "Microsoft.Extensions.FileSystemGlobbing": "(,10.0.32767]",
+            "Microsoft.Extensions.Hosting": "(,10.0.32767]",
+            "Microsoft.Extensions.Hosting.Abstractions": "(,10.0.32767]",
+            "Microsoft.Extensions.Http": "(,10.0.32767]",
+            "Microsoft.Extensions.Identity.Core": "(,10.0.32767]",
+            "Microsoft.Extensions.Identity.Stores": "(,10.0.32767]",
+            "Microsoft.Extensions.Localization": "(,10.0.32767]",
+            "Microsoft.Extensions.Localization.Abstractions": "(,10.0.32767]",
+            "Microsoft.Extensions.Logging": "(,10.0.32767]",
+            "Microsoft.Extensions.Logging.Abstractions": "(,10.0.32767]",
+            "Microsoft.Extensions.Logging.Configuration": "(,10.0.32767]",
+            "Microsoft.Extensions.Logging.Console": "(,10.0.32767]",
+            "Microsoft.Extensions.Logging.Debug": "(,10.0.32767]",
+            "Microsoft.Extensions.Logging.EventLog": "(,10.0.32767]",
+            "Microsoft.Extensions.Logging.EventSource": "(,10.0.32767]",
+            "Microsoft.Extensions.Logging.TraceSource": "(,10.0.32767]",
+            "Microsoft.Extensions.ObjectPool": "(,10.0.32767]",
+            "Microsoft.Extensions.Options": "(,10.0.32767]",
+            "Microsoft.Extensions.Options.ConfigurationExtensions": "(,10.0.32767]",
+            "Microsoft.Extensions.Options.DataAnnotations": "(,10.0.32767]",
+            "Microsoft.Extensions.Primitives": "(,10.0.32767]",
+            "Microsoft.Extensions.Validation": "(,10.0.32767]",
+            "Microsoft.Extensions.WebEncoders": "(,10.0.32767]",
+            "Microsoft.JSInterop": "(,10.0.32767]",
+            "Microsoft.Net.Http.Headers": "(,10.0.32767]",
+            "Microsoft.VisualBasic": "(,10.4.32767]",
+            "Microsoft.Win32.Primitives": "(,4.3.32767]",
+            "Microsoft.Win32.Registry": "(,5.0.32767]",
+            "runtime.any.System.Collections": "(,4.3.32767]",
+            "runtime.any.System.Diagnostics.Tools": "(,4.3.32767]",
+            "runtime.any.System.Diagnostics.Tracing": "(,4.3.32767]",
+            "runtime.any.System.Globalization": "(,4.3.32767]",
+            "runtime.any.System.Globalization.Calendars": "(,4.3.32767]",
+            "runtime.any.System.IO": "(,4.3.32767]",
+            "runtime.any.System.Reflection": "(,4.3.32767]",
+            "runtime.any.System.Reflection.Extensions": "(,4.3.32767]",
+            "runtime.any.System.Reflection.Primitives": "(,4.3.32767]",
+            "runtime.any.System.Resources.ResourceManager": "(,4.3.32767]",
+            "runtime.any.System.Runtime": "(,4.3.32767]",
+            "runtime.any.System.Runtime.Handles": "(,4.3.32767]",
+            "runtime.any.System.Runtime.InteropServices": "(,4.3.32767]",
+            "runtime.any.System.Text.Encoding": "(,4.3.32767]",
+            "runtime.any.System.Text.Encoding.Extensions": "(,4.3.32767]",
+            "runtime.any.System.Threading.Tasks": "(,4.3.32767]",
+            "runtime.any.System.Threading.Timer": "(,4.3.32767]",
+            "runtime.aot.System.Collections": "(,4.3.32767]",
+            "runtime.aot.System.Diagnostics.Tools": "(,4.3.32767]",
+            "runtime.aot.System.Diagnostics.Tracing": "(,4.3.32767]",
+            "runtime.aot.System.Globalization": "(,4.3.32767]",
+            "runtime.aot.System.Globalization.Calendars": "(,4.3.32767]",
+            "runtime.aot.System.IO": "(,4.3.32767]",
+            "runtime.aot.System.Reflection": "(,4.3.32767]",
+            "runtime.aot.System.Reflection.Extensions": "(,4.3.32767]",
+            "runtime.aot.System.Reflection.Primitives": "(,4.3.32767]",
+            "runtime.aot.System.Resources.ResourceManager": "(,4.3.32767]",
+            "runtime.aot.System.Runtime": "(,4.3.32767]",
+            "runtime.aot.System.Runtime.Handles": "(,4.3.32767]",
+            "runtime.aot.System.Runtime.InteropServices": "(,4.3.32767]",
+            "runtime.aot.System.Text.Encoding": "(,4.3.32767]",
+            "runtime.aot.System.Text.Encoding.Extensions": "(,4.3.32767]",
+            "runtime.aot.System.Threading.Tasks": "(,4.3.32767]",
+            "runtime.aot.System.Threading.Timer": "(,4.3.32767]",
+            "runtime.debian.8-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.debian.8-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.debian.8-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.debian.8-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.debian.8-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.debian.9-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.debian.9-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.debian.9-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.debian.9-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.fedora.23-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.fedora.23-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.fedora.23-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.fedora.23-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.fedora.23-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.fedora.23-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.fedora.24-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.fedora.24-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.fedora.24-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.fedora.24-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.fedora.24-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.fedora.24-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.fedora.27-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.fedora.27-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.fedora.27-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.fedora.27-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.fedora.28-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.fedora.28-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.fedora.28-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.fedora.28-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.opensuse.13.2-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.opensuse.13.2-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.opensuse.13.2-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.opensuse.13.2-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.opensuse.13.2-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.opensuse.13.2-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.opensuse.42.1-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.opensuse.42.1-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.opensuse.42.1-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.opensuse.42.1-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.opensuse.42.1-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.opensuse.42.1-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.opensuse.42.3-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.opensuse.42.3-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.opensuse.42.3-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.opensuse.42.3-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.osx.10.10-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.osx.10.10-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.osx.10.10-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.osx.10.10-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.osx.10.10-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.osx.10.10-x64.runtime.native.System.Security.Cryptography.Apple": "(,4.3.32767]",
+            "runtime.osx.10.10-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.rhel.7-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.rhel.7-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.rhel.7-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.rhel.7-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.rhel.7-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.rhel.7-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.ubuntu.14.04-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.ubuntu.14.04-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.ubuntu.14.04-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.ubuntu.14.04-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.ubuntu.14.04-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.ubuntu.14.04-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.ubuntu.16.04-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.ubuntu.16.04-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.ubuntu.16.04-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.ubuntu.16.04-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.ubuntu.16.04-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.ubuntu.16.04-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.ubuntu.16.10-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.ubuntu.16.10-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.ubuntu.16.10-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.ubuntu.16.10-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.ubuntu.16.10-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+            "runtime.ubuntu.16.10-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+            "runtime.ubuntu.18.04-x64.runtime.native.System": "(,4.3.32767]",
+            "runtime.ubuntu.18.04-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.ubuntu.18.04-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+            "runtime.ubuntu.18.04-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+            "runtime.unix.Microsoft.Win32.Primitives": "(,4.3.32767]",
+            "runtime.unix.System.Console": "(,4.3.32767]",
+            "runtime.unix.System.Diagnostics.Debug": "(,4.3.32767]",
+            "runtime.unix.System.IO.FileSystem": "(,4.3.32767]",
+            "runtime.unix.System.Net.Primitives": "(,4.3.32767]",
+            "runtime.unix.System.Net.Sockets": "(,4.3.32767]",
+            "runtime.unix.System.Private.Uri": "(,4.3.32767]",
+            "runtime.unix.System.Runtime.Extensions": "(,4.3.32767]",
+            "runtime.win.Microsoft.Win32.Primitives": "(,4.3.32767]",
+            "runtime.win.System.Console": "(,4.3.32767]",
+            "runtime.win.System.Diagnostics.Debug": "(,4.3.32767]",
+            "runtime.win.System.IO.FileSystem": "(,4.3.32767]",
+            "runtime.win.System.Net.Primitives": "(,4.3.32767]",
+            "runtime.win.System.Net.Sockets": "(,4.3.32767]",
+            "runtime.win.System.Runtime.Extensions": "(,4.3.32767]",
+            "runtime.win10-arm-aot.runtime.native.System.IO.Compression": "(,4.0.32767]",
+            "runtime.win10-arm64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.win10-x64-aot.runtime.native.System.IO.Compression": "(,4.0.32767]",
+            "runtime.win10-x86-aot.runtime.native.System.IO.Compression": "(,4.0.32767]",
+            "runtime.win7-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.win7-x86.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "runtime.win7.System.Private.Uri": "(,4.3.32767]",
+            "runtime.win8-arm.runtime.native.System.IO.Compression": "(,4.3.32767]",
+            "System.AppContext": "(,4.3.32767]",
+            "System.Buffers": "(,5.0.32767]",
+            "System.Collections": "(,4.3.32767]",
+            "System.Collections.Concurrent": "(,4.3.32767]",
+            "System.Collections.Immutable": "(,10.0.32767]",
+            "System.Collections.NonGeneric": "(,4.3.32767]",
+            "System.Collections.Specialized": "(,4.3.32767]",
+            "System.ComponentModel": "(,4.3.32767]",
+            "System.ComponentModel.Annotations": "(,4.3.32767]",
+            "System.ComponentModel.EventBasedAsync": "(,4.3.32767]",
+            "System.ComponentModel.Primitives": "(,4.3.32767]",
+            "System.ComponentModel.TypeConverter": "(,4.3.32767]",
+            "System.Console": "(,4.3.32767]",
+            "System.Data.Common": "(,4.3.32767]",
+            "System.Data.DataSetExtensions": "(,4.4.32767]",
+            "System.Diagnostics.Contracts": "(,4.3.32767]",
+            "System.Diagnostics.Debug": "(,4.3.32767]",
+            "System.Diagnostics.DiagnosticSource": "(,10.0.32767]",
+            "System.Diagnostics.EventLog": "(,10.0.32767]",
+            "System.Diagnostics.FileVersionInfo": "(,4.3.32767]",
+            "System.Diagnostics.Process": "(,4.3.32767]",
+            "System.Diagnostics.StackTrace": "(,4.3.32767]",
+            "System.Diagnostics.TextWriterTraceListener": "(,4.3.32767]",
+            "System.Diagnostics.Tools": "(,4.3.32767]",
+            "System.Diagnostics.TraceSource": "(,4.3.32767]",
+            "System.Diagnostics.Tracing": "(,4.3.32767]",
+            "System.Drawing.Primitives": "(,4.3.32767]",
+            "System.Dynamic.Runtime": "(,4.3.32767]",
+            "System.Formats.Asn1": "(,10.0.32767]",
+            "System.Formats.Cbor": "(,10.0.32767]",
+            "System.Formats.Tar": "(,10.0.32767]",
+            "System.Globalization": "(,4.3.32767]",
+            "System.Globalization.Calendars": "(,4.3.32767]",
+            "System.Globalization.Extensions": "(,4.3.32767]",
+            "System.IO": "(,4.3.32767]",
+            "System.IO.Compression": "(,4.3.32767]",
+            "System.IO.Compression.ZipFile": "(,4.3.32767]",
+            "System.IO.FileSystem": "(,4.3.32767]",
+            "System.IO.FileSystem.AccessControl": "(,4.4.32767]",
+            "System.IO.FileSystem.DriveInfo": "(,4.3.32767]",
+            "System.IO.FileSystem.Primitives": "(,4.3.32767]",
+            "System.IO.FileSystem.Watcher": "(,4.3.32767]",
+            "System.IO.IsolatedStorage": "(,4.3.32767]",
+            "System.IO.MemoryMappedFiles": "(,4.3.32767]",
+            "System.IO.Pipelines": "(,10.0.32767]",
+            "System.IO.Pipes": "(,4.3.32767]",
+            "System.IO.Pipes.AccessControl": "(,5.0.32767]",
+            "System.IO.UnmanagedMemoryStream": "(,4.3.32767]",
+            "System.Linq": "(,4.3.32767]",
+            "System.Linq.AsyncEnumerable": "(,10.0.32767]",
+            "System.Linq.Expressions": "(,4.3.32767]",
+            "System.Linq.Parallel": "(,4.3.32767]",
+            "System.Linq.Queryable": "(,4.3.32767]",
+            "System.Memory": "(,5.0.32767]",
+            "System.Net.Http": "(,4.3.32767]",
+            "System.Net.Http.Json": "(,10.0.32767]",
+            "System.Net.NameResolution": "(,4.3.32767]",
+            "System.Net.NetworkInformation": "(,4.3.32767]",
+            "System.Net.Ping": "(,4.3.32767]",
+            "System.Net.Primitives": "(,4.3.32767]",
+            "System.Net.Requests": "(,4.3.32767]",
+            "System.Net.Security": "(,4.3.32767]",
+            "System.Net.ServerSentEvents": "(,10.0.32767]",
+            "System.Net.Sockets": "(,4.3.32767]",
+            "System.Net.WebHeaderCollection": "(,4.3.32767]",
+            "System.Net.WebSockets": "(,4.3.32767]",
+            "System.Net.WebSockets.Client": "(,4.3.32767]",
+            "System.Numerics.Vectors": "(,5.0.32767]",
+            "System.ObjectModel": "(,4.3.32767]",
+            "System.Private.DataContractSerialization": "(,4.3.32767]",
+            "System.Private.Uri": "(,4.3.32767]",
+            "System.Reflection": "(,4.3.32767]",
+            "System.Reflection.DispatchProxy": "(,6.0.32767]",
+            "System.Reflection.Emit": "(,4.7.32767]",
+            "System.Reflection.Emit.ILGeneration": "(,4.7.32767]",
+            "System.Reflection.Emit.Lightweight": "(,4.7.32767]",
+            "System.Reflection.Extensions": "(,4.3.32767]",
+            "System.Reflection.Metadata": "(,10.0.32767]",
+            "System.Reflection.Primitives": "(,4.3.32767]",
+            "System.Reflection.TypeExtensions": "(,4.3.32767]",
+            "System.Resources.Reader": "(,4.3.32767]",
+            "System.Resources.ResourceManager": "(,4.3.32767]",
+            "System.Resources.Writer": "(,4.3.32767]",
+            "System.Runtime": "(,4.3.32767]",
+            "System.Runtime.CompilerServices.Unsafe": "(,7.0.32767]",
+            "System.Runtime.CompilerServices.VisualC": "(,4.3.32767]",
+            "System.Runtime.Extensions": "(,4.3.32767]",
+            "System.Runtime.Handles": "(,4.3.32767]",
+            "System.Runtime.InteropServices": "(,4.3.32767]",
+            "System.Runtime.InteropServices.RuntimeInformation": "(,4.3.32767]",
+            "System.Runtime.Loader": "(,4.3.32767]",
+            "System.Runtime.Numerics": "(,4.3.32767]",
+            "System.Runtime.Serialization.Formatters": "(,4.3.32767]",
+            "System.Runtime.Serialization.Json": "(,4.3.32767]",
+            "System.Runtime.Serialization.Primitives": "(,4.3.32767]",
+            "System.Runtime.Serialization.Xml": "(,4.3.32767]",
+            "System.Security.AccessControl": "(,6.0.32767]",
+            "System.Security.Claims": "(,4.3.32767]",
+            "System.Security.Cryptography.Algorithms": "(,4.3.32767]",
+            "System.Security.Cryptography.Cng": "(,5.0.32767]",
+            "System.Security.Cryptography.Csp": "(,4.3.32767]",
+            "System.Security.Cryptography.Encoding": "(,4.3.32767]",
+            "System.Security.Cryptography.OpenSsl": "(,5.0.32767]",
+            "System.Security.Cryptography.Primitives": "(,4.3.32767]",
+            "System.Security.Cryptography.X509Certificates": "(,4.3.32767]",
+            "System.Security.Cryptography.Xml": "(,10.0.32767]",
+            "System.Security.Principal": "(,4.3.32767]",
+            "System.Security.Principal.Windows": "(,5.0.32767]",
+            "System.Security.SecureString": "(,4.3.32767]",
+            "System.Text.Encoding": "(,4.3.32767]",
+            "System.Text.Encoding.CodePages": "(,10.0.32767]",
+            "System.Text.Encoding.Extensions": "(,4.3.32767]",
+            "System.Text.Encodings.Web": "(,10.0.32767]",
+            "System.Text.Json": "(,10.0.32767]",
+            "System.Text.RegularExpressions": "(,4.3.32767]",
+            "System.Threading": "(,4.3.32767]",
+            "System.Threading.AccessControl": "(,10.0.32767]",
+            "System.Threading.Channels": "(,10.0.32767]",
+            "System.Threading.Overlapped": "(,4.3.32767]",
+            "System.Threading.RateLimiting": "(,10.0.32767]",
+            "System.Threading.Tasks": "(,4.3.32767]",
+            "System.Threading.Tasks.Dataflow": "(,10.0.32767]",
+            "System.Threading.Tasks.Extensions": "(,5.0.32767]",
+            "System.Threading.Tasks.Parallel": "(,4.3.32767]",
+            "System.Threading.Thread": "(,4.3.32767]",
+            "System.Threading.ThreadPool": "(,4.3.32767]",
+            "System.Threading.Timer": "(,4.3.32767]",
+            "System.ValueTuple": "(,4.5.32767]",
+            "System.Xml.ReaderWriter": "(,4.3.32767]",
+            "System.Xml.XDocument": "(,4.3.32767]",
+            "System.Xml.XmlDocument": "(,4.3.32767]",
+            "System.Xml.XmlSerializer": "(,4.3.32767]",
+            "System.Xml.XPath": "(,4.3.32767]",
+            "System.Xml.XPath.XDocument": "(,5.0.32767]"
+          }
+        }
+      }
+    }
+  }
+}
+
+obj/CampusRouteLab.csproj.nuget.g.props
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <RestoreSuccess Condition=" '$(RestoreSuccess)' == '' ">True</RestoreSuccess>
+    <RestoreTool Condition=" '$(RestoreTool)' == '' ">NuGet</RestoreTool>
+    <ProjectAssetsFile Condition=" '$(ProjectAssetsFile)' == '' ">$(MSBuildThisFileDirectory)project.assets.json</ProjectAssetsFile>
+    <NuGetPackageRoot Condition=" '$(NuGetPackageRoot)' == '' ">$(UserProfile)\.nuget\packages\</NuGetPackageRoot>
+    <NuGetPackageFolders Condition=" '$(NuGetPackageFolders)' == '' ">C:\Users\relax\.nuget\packages\</NuGetPackageFolders>
+    <NuGetProjectStyle Condition=" '$(NuGetProjectStyle)' == '' ">PackageReference</NuGetProjectStyle>
+    <NuGetToolVersion Condition=" '$(NuGetToolVersion)' == '' ">7.0.0</NuGetToolVersion>
+  </PropertyGroup>
+  <ItemGroup Condition=" '$(ExcludeRestorePackageImports)' != 'true' ">
+    <SourceRoot Include="C:\Users\relax\.nuget\packages\" />
+  </ItemGroup>
+</Project>
+
+obj/CampusRouteLab.csproj.nuget.g.targets
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" />
+
+obj/project.assets.json
+{
+  "version": 3,
+  "targets": {
+    "net10.0": {}
+  },
+  "libraries": {},
+  "projectFileDependencyGroups": {
+    "net10.0": []
+  },
+  "packageFolders": {
+    "C:\\Users\\relax\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\relax\\Documents\\my-project\\CampusRouteLab.csproj",
+      "projectName": "CampusRouteLab",
+      "projectPath": "C:\\Users\\relax\\Documents\\my-project\\CampusRouteLab.csproj",
+      "packagesPath": "C:\\Users\\relax\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\relax\\Documents\\my-project\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\relax\\AppData\\Roaming\\NuGet\\NuGet.Config"
+      ],
+      "originalTargetFrameworks": [
+        "net10.0"
+      ],
+      "sources": {
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net10.0": {
+          "targetAlias": "net10.0",
+          "projectReferences": {}
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "all"
+      },
+      "SdkAnalysisLevel": "10.0.200"
+    },
+    "frameworks": {
+      "net10.0": {
+        "targetAlias": "net10.0",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "Microsoft.AspNetCore.App": {
+            "privateAssets": "none"
+          },
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json",
+        "packagesToPrune": {
+          "Microsoft.AspNetCore": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
+          "Microsoft.AspNetCore.App": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Authentication": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Authentication.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Authentication.BearerToken": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Authentication.Cookies": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Authentication.Core": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Authentication.OAuth": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Authorization": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Authorization.Policy": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Components": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Components.Authorization": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Components.Endpoints": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Components.Forms": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Components.Server": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Components.Web": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Connections.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.CookiePolicy": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Cors": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Cryptography.Internal": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Cryptography.KeyDerivation": "(,10.0.32767]",
+          "Microsoft.AspNetCore.DataProtection": "(,10.0.32767]",
+          "Microsoft.AspNetCore.DataProtection.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.DataProtection.Extensions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Diagnostics": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Diagnostics.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Diagnostics.HealthChecks": "(,10.0.32767]",
+          "Microsoft.AspNetCore.HostFiltering": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Hosting": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Hosting.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Hosting.Server.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Html.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Http": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Http.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Http.Connections": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Http.Connections.Common": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Http.Extensions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Http.Features": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Http.Results": "(,10.0.32767]",
+          "Microsoft.AspNetCore.HttpLogging": "(,10.0.32767]",
+          "Microsoft.AspNetCore.HttpOverrides": "(,10.0.32767]",
+          "Microsoft.AspNetCore.HttpsPolicy": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Identity": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Localization": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Localization.Routing": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Metadata": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.ApiExplorer": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.Core": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.Cors": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.DataAnnotations": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.Formatters.Json": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.Formatters.Xml": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.Localization": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.Razor": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.RazorPages": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.TagHelpers": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Mvc.ViewFeatures": "(,10.0.32767]",
+          "Microsoft.AspNetCore.OutputCaching": "(,10.0.32767]",
+          "Microsoft.AspNetCore.RateLimiting": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Razor": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Razor.Runtime": "(,10.0.32767]",
+          "Microsoft.AspNetCore.RequestDecompression": "(,10.0.32767]",
+          "Microsoft.AspNetCore.ResponseCaching": "(,10.0.32767]",
+          "Microsoft.AspNetCore.ResponseCaching.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.ResponseCompression": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Rewrite": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Routing": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Routing.Abstractions": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Server.HttpSys": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Server.IIS": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Server.IISIntegration": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Server.Kestrel": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Server.Kestrel.Core": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Server.Kestrel.Transport.NamedPipes": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Server.Kestrel.Transport.Quic": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets": "(,10.0.32767]",
+          "Microsoft.AspNetCore.Session": "(,10.0.32767]",
+          "Microsoft.AspNetCore.SignalR": "(,10.0.32767]",
+          "Microsoft.AspNetCore.SignalR.Common": "(,10.0.32767]",
+          "Microsoft.AspNetCore.SignalR.Core": "(,10.0.32767]",
+          "Microsoft.AspNetCore.SignalR.Protocols.Json": "(,10.0.32767]",
+          "Microsoft.AspNetCore.StaticAssets": "(,10.0.32767]",
+          "Microsoft.AspNetCore.StaticFiles": "(,10.0.32767]",
+          "Microsoft.AspNetCore.WebSockets": "(,10.0.32767]",
+          "Microsoft.AspNetCore.WebUtilities": "(,10.0.32767]",
+          "Microsoft.CSharp": "(,4.7.32767]",
+          "Microsoft.Extensions.Caching.Abstractions": "(,10.0.32767]",
+          "Microsoft.Extensions.Caching.Memory": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.Abstractions": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.Binder": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.CommandLine": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.FileExtensions": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.Ini": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.Json": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.KeyPerFile": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.UserSecrets": "(,10.0.32767]",
+          "Microsoft.Extensions.Configuration.Xml": "(,10.0.32767]",
+          "Microsoft.Extensions.DependencyInjection": "(,10.0.32767]",
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "(,10.0.32767]",
+          "Microsoft.Extensions.Diagnostics": "(,10.0.32767]",
+          "Microsoft.Extensions.Diagnostics.Abstractions": "(,10.0.32767]",
+          "Microsoft.Extensions.Diagnostics.HealthChecks": "(,10.0.32767]",
+          "Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions": "(,10.0.32767]",
+          "Microsoft.Extensions.Features": "(,10.0.32767]",
+          "Microsoft.Extensions.FileProviders.Abstractions": "(,10.0.32767]",
+          "Microsoft.Extensions.FileProviders.Composite": "(,10.0.32767]",
+          "Microsoft.Extensions.FileProviders.Physical": "(,10.0.32767]",
+          "Microsoft.Extensions.FileSystemGlobbing": "(,10.0.32767]",
+          "Microsoft.Extensions.Hosting": "(,10.0.32767]",
+          "Microsoft.Extensions.Hosting.Abstractions": "(,10.0.32767]",
+          "Microsoft.Extensions.Http": "(,10.0.32767]",
+          "Microsoft.Extensions.Identity.Core": "(,10.0.32767]",
+          "Microsoft.Extensions.Identity.Stores": "(,10.0.32767]",
+          "Microsoft.Extensions.Localization": "(,10.0.32767]",
+          "Microsoft.Extensions.Localization.Abstractions": "(,10.0.32767]",
+          "Microsoft.Extensions.Logging": "(,10.0.32767]",
+          "Microsoft.Extensions.Logging.Abstractions": "(,10.0.32767]",
+          "Microsoft.Extensions.Logging.Configuration": "(,10.0.32767]",
+          "Microsoft.Extensions.Logging.Console": "(,10.0.32767]",
+          "Microsoft.Extensions.Logging.Debug": "(,10.0.32767]",
+          "Microsoft.Extensions.Logging.EventLog": "(,10.0.32767]",
+          "Microsoft.Extensions.Logging.EventSource": "(,10.0.32767]",
+          "Microsoft.Extensions.Logging.TraceSource": "(,10.0.32767]",
+          "Microsoft.Extensions.ObjectPool": "(,10.0.32767]",
+          "Microsoft.Extensions.Options": "(,10.0.32767]",
+          "Microsoft.Extensions.Options.ConfigurationExtensions": "(,10.0.32767]",
+          "Microsoft.Extensions.Options.DataAnnotations": "(,10.0.32767]",
+          "Microsoft.Extensions.Primitives": "(,10.0.32767]",
+          "Microsoft.Extensions.Validation": "(,10.0.32767]",
+          "Microsoft.Extensions.WebEncoders": "(,10.0.32767]",
+          "Microsoft.JSInterop": "(,10.0.32767]",
+          "Microsoft.Net.Http.Headers": "(,10.0.32767]",
+          "Microsoft.VisualBasic": "(,10.4.32767]",
+          "Microsoft.Win32.Primitives": "(,4.3.32767]",
+          "Microsoft.Win32.Registry": "(,5.0.32767]",
+          "runtime.any.System.Collections": "(,4.3.32767]",
+          "runtime.any.System.Diagnostics.Tools": "(,4.3.32767]",
+          "runtime.any.System.Diagnostics.Tracing": "(,4.3.32767]",
+          "runtime.any.System.Globalization": "(,4.3.32767]",
+          "runtime.any.System.Globalization.Calendars": "(,4.3.32767]",
+          "runtime.any.System.IO": "(,4.3.32767]",
+          "runtime.any.System.Reflection": "(,4.3.32767]",
+          "runtime.any.System.Reflection.Extensions": "(,4.3.32767]",
+          "runtime.any.System.Reflection.Primitives": "(,4.3.32767]",
+          "runtime.any.System.Resources.ResourceManager": "(,4.3.32767]",
+          "runtime.any.System.Runtime": "(,4.3.32767]",
+          "runtime.any.System.Runtime.Handles": "(,4.3.32767]",
+          "runtime.any.System.Runtime.InteropServices": "(,4.3.32767]",
+          "runtime.any.System.Text.Encoding": "(,4.3.32767]",
+          "runtime.any.System.Text.Encoding.Extensions": "(,4.3.32767]",
+          "runtime.any.System.Threading.Tasks": "(,4.3.32767]",
+          "runtime.any.System.Threading.Timer": "(,4.3.32767]",
+          "runtime.aot.System.Collections": "(,4.3.32767]",
+          "runtime.aot.System.Diagnostics.Tools": "(,4.3.32767]",
+          "runtime.aot.System.Diagnostics.Tracing": "(,4.3.32767]",
+          "runtime.aot.System.Globalization": "(,4.3.32767]",
+          "runtime.aot.System.Globalization.Calendars": "(,4.3.32767]",
+          "runtime.aot.System.IO": "(,4.3.32767]",
+          "runtime.aot.System.Reflection": "(,4.3.32767]",
+          "runtime.aot.System.Reflection.Extensions": "(,4.3.32767]",
+          "runtime.aot.System.Reflection.Primitives": "(,4.3.32767]",
+          "runtime.aot.System.Resources.ResourceManager": "(,4.3.32767]",
+          "runtime.aot.System.Runtime": "(,4.3.32767]",
+          "runtime.aot.System.Runtime.Handles": "(,4.3.32767]",
+          "runtime.aot.System.Runtime.InteropServices": "(,4.3.32767]",
+          "runtime.aot.System.Text.Encoding": "(,4.3.32767]",
+          "runtime.aot.System.Text.Encoding.Extensions": "(,4.3.32767]",
+          "runtime.aot.System.Threading.Tasks": "(,4.3.32767]",
+          "runtime.aot.System.Threading.Timer": "(,4.3.32767]",
+          "runtime.debian.8-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.debian.8-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.debian.8-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.debian.8-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.debian.8-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.debian.8-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.debian.9-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.debian.9-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.debian.9-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.debian.9-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.fedora.23-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.fedora.23-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.fedora.23-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.fedora.23-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.fedora.23-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.fedora.23-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.fedora.24-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.fedora.24-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.fedora.24-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.fedora.24-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.fedora.24-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.fedora.24-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.fedora.27-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.fedora.27-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.fedora.27-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.fedora.27-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.fedora.28-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.fedora.28-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.fedora.28-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.fedora.28-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.opensuse.13.2-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.opensuse.13.2-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.opensuse.13.2-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.opensuse.13.2-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.opensuse.13.2-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.opensuse.13.2-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.opensuse.42.1-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.opensuse.42.1-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.opensuse.42.1-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.opensuse.42.1-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.opensuse.42.1-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.opensuse.42.1-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.opensuse.42.3-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.opensuse.42.3-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.opensuse.42.3-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.opensuse.42.3-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.osx.10.10-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.osx.10.10-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.osx.10.10-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.osx.10.10-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.osx.10.10-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.osx.10.10-x64.runtime.native.System.Security.Cryptography.Apple": "(,4.3.32767]",
+          "runtime.osx.10.10-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.rhel.7-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.rhel.7-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.rhel.7-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.rhel.7-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.rhel.7-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.rhel.7-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.ubuntu.14.04-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.ubuntu.14.04-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.ubuntu.14.04-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.ubuntu.14.04-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.ubuntu.14.04-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.ubuntu.14.04-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.ubuntu.16.04-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.ubuntu.16.04-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.ubuntu.16.04-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.ubuntu.16.04-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.ubuntu.16.04-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.ubuntu.16.04-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.ubuntu.16.10-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.ubuntu.16.10-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.ubuntu.16.10-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.ubuntu.16.10-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.ubuntu.16.10-x64.runtime.native.System.Security.Cryptography": "(,4.3.32767]",
+          "runtime.ubuntu.16.10-x64.runtime.native.System.Security.Cryptography.OpenSsl": "(,4.3.32767]",
+          "runtime.ubuntu.18.04-x64.runtime.native.System": "(,4.3.32767]",
+          "runtime.ubuntu.18.04-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.ubuntu.18.04-x64.runtime.native.System.Net.Http": "(,4.3.32767]",
+          "runtime.ubuntu.18.04-x64.runtime.native.System.Net.Security": "(,4.3.32767]",
+          "runtime.unix.Microsoft.Win32.Primitives": "(,4.3.32767]",
+          "runtime.unix.System.Console": "(,4.3.32767]",
+          "runtime.unix.System.Diagnostics.Debug": "(,4.3.32767]",
+          "runtime.unix.System.IO.FileSystem": "(,4.3.32767]",
+          "runtime.unix.System.Net.Primitives": "(,4.3.32767]",
+          "runtime.unix.System.Net.Sockets": "(,4.3.32767]",
+          "runtime.unix.System.Private.Uri": "(,4.3.32767]",
+          "runtime.unix.System.Runtime.Extensions": "(,4.3.32767]",
+          "runtime.win.Microsoft.Win32.Primitives": "(,4.3.32767]",
+          "runtime.win.System.Console": "(,4.3.32767]",
+          "runtime.win.System.Diagnostics.Debug": "(,4.3.32767]",
+          "runtime.win.System.IO.FileSystem": "(,4.3.32767]",
+          "runtime.win.System.Net.Primitives": "(,4.3.32767]",
+          "runtime.win.System.Net.Sockets": "(,4.3.32767]",
+          "runtime.win.System.Runtime.Extensions": "(,4.3.32767]",
+          "runtime.win10-arm-aot.runtime.native.System.IO.Compression": "(,4.0.32767]",
+          "runtime.win10-arm64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.win10-x64-aot.runtime.native.System.IO.Compression": "(,4.0.32767]",
+          "runtime.win10-x86-aot.runtime.native.System.IO.Compression": "(,4.0.32767]",
+          "runtime.win7-x64.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.win7-x86.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "runtime.win7.System.Private.Uri": "(,4.3.32767]",
+          "runtime.win8-arm.runtime.native.System.IO.Compression": "(,4.3.32767]",
+          "System.AppContext": "(,4.3.32767]",
+          "System.Buffers": "(,5.0.32767]",
+          "System.Collections": "(,4.3.32767]",
+          "System.Collections.Concurrent": "(,4.3.32767]",
+          "System.Collections.Immutable": "(,10.0.32767]",
+          "System.Collections.NonGeneric": "(,4.3.32767]",
+          "System.Collections.Specialized": "(,4.3.32767]",
+          "System.ComponentModel": "(,4.3.32767]",
+          "System.ComponentModel.Annotations": "(,4.3.32767]",
+          "System.ComponentModel.EventBasedAsync": "(,4.3.32767]",
+          "System.ComponentModel.Primitives": "(,4.3.32767]",
+          "System.ComponentModel.TypeConverter": "(,4.3.32767]",
+          "System.Console": "(,4.3.32767]",
+          "System.Data.Common": "(,4.3.32767]",
+          "System.Data.DataSetExtensions": "(,4.4.32767]",
+          "System.Diagnostics.Contracts": "(,4.3.32767]",
+          "System.Diagnostics.Debug": "(,4.3.32767]",
+          "System.Diagnostics.DiagnosticSource": "(,10.0.32767]",
+          "System.Diagnostics.EventLog": "(,10.0.32767]",
+          "System.Diagnostics.FileVersionInfo": "(,4.3.32767]",
+          "System.Diagnostics.Process": "(,4.3.32767]",
+          "System.Diagnostics.StackTrace": "(,4.3.32767]",
+          "System.Diagnostics.TextWriterTraceListener": "(,4.3.32767]",
+          "System.Diagnostics.Tools": "(,4.3.32767]",
+          "System.Diagnostics.TraceSource": "(,4.3.32767]",
+          "System.Diagnostics.Tracing": "(,4.3.32767]",
+          "System.Drawing.Primitives": "(,4.3.32767]",
+          "System.Dynamic.Runtime": "(,4.3.32767]",
+          "System.Formats.Asn1": "(,10.0.32767]",
+          "System.Formats.Cbor": "(,10.0.32767]",
+          "System.Formats.Tar": "(,10.0.32767]",
+          "System.Globalization": "(,4.3.32767]",
+          "System.Globalization.Calendars": "(,4.3.32767]",
+          "System.Globalization.Extensions": "(,4.3.32767]",
+          "System.IO": "(,4.3.32767]",
+          "System.IO.Compression": "(,4.3.32767]",
+          "System.IO.Compression.ZipFile": "(,4.3.32767]",
+          "System.IO.FileSystem": "(,4.3.32767]",
+          "System.IO.FileSystem.AccessControl": "(,4.4.32767]",
+          "System.IO.FileSystem.DriveInfo": "(,4.3.32767]",
+          "System.IO.FileSystem.Primitives": "(,4.3.32767]",
+          "System.IO.FileSystem.Watcher": "(,4.3.32767]",
+          "System.IO.IsolatedStorage": "(,4.3.32767]",
+          "System.IO.MemoryMappedFiles": "(,4.3.32767]",
+          "System.IO.Pipelines": "(,10.0.32767]",
+          "System.IO.Pipes": "(,4.3.32767]",
+          "System.IO.Pipes.AccessControl": "(,5.0.32767]",
+          "System.IO.UnmanagedMemoryStream": "(,4.3.32767]",
+          "System.Linq": "(,4.3.32767]",
+          "System.Linq.AsyncEnumerable": "(,10.0.32767]",
+          "System.Linq.Expressions": "(,4.3.32767]",
+          "System.Linq.Parallel": "(,4.3.32767]",
+          "System.Linq.Queryable": "(,4.3.32767]",
+          "System.Memory": "(,5.0.32767]",
+          "System.Net.Http": "(,4.3.32767]",
+          "System.Net.Http.Json": "(,10.0.32767]",
+          "System.Net.NameResolution": "(,4.3.32767]",
+          "System.Net.NetworkInformation": "(,4.3.32767]",
+          "System.Net.Ping": "(,4.3.32767]",
+          "System.Net.Primitives": "(,4.3.32767]",
+          "System.Net.Requests": "(,4.3.32767]",
+          "System.Net.Security": "(,4.3.32767]",
+          "System.Net.ServerSentEvents": "(,10.0.32767]",
+          "System.Net.Sockets": "(,4.3.32767]",
+          "System.Net.WebHeaderCollection": "(,4.3.32767]",
+          "System.Net.WebSockets": "(,4.3.32767]",
+          "System.Net.WebSockets.Client": "(,4.3.32767]",
+          "System.Numerics.Vectors": "(,5.0.32767]",
+          "System.ObjectModel": "(,4.3.32767]",
+          "System.Private.DataContractSerialization": "(,4.3.32767]",
+          "System.Private.Uri": "(,4.3.32767]",
+          "System.Reflection": "(,4.3.32767]",
+          "System.Reflection.DispatchProxy": "(,6.0.32767]",
+          "System.Reflection.Emit": "(,4.7.32767]",
+          "System.Reflection.Emit.ILGeneration": "(,4.7.32767]",
+          "System.Reflection.Emit.Lightweight": "(,4.7.32767]",
+          "System.Reflection.Extensions": "(,4.3.32767]",
+          "System.Reflection.Metadata": "(,10.0.32767]",
+          "System.Reflection.Primitives": "(,4.3.32767]",
+          "System.Reflection.TypeExtensions": "(,4.3.32767]",
+          "System.Resources.Reader": "(,4.3.32767]",
+          "System.Resources.ResourceManager": "(,4.3.32767]",
+          "System.Resources.Writer": "(,4.3.32767]",
+          "System.Runtime": "(,4.3.32767]",
+          "System.Runtime.CompilerServices.Unsafe": "(,7.0.32767]",
+          "System.Runtime.CompilerServices.VisualC": "(,4.3.32767]",
+          "System.Runtime.Extensions": "(,4.3.32767]",
+          "System.Runtime.Handles": "(,4.3.32767]",
+          "System.Runtime.InteropServices": "(,4.3.32767]",
+          "System.Runtime.InteropServices.RuntimeInformation": "(,4.3.32767]",
+          "System.Runtime.Loader": "(,4.3.32767]",
+          "System.Runtime.Numerics": "(,4.3.32767]",
+          "System.Runtime.Serialization.Formatters": "(,4.3.32767]",
+          "System.Runtime.Serialization.Json": "(,4.3.32767]",
+          "System.Runtime.Serialization.Primitives": "(,4.3.32767]",
+          "System.Runtime.Serialization.Xml": "(,4.3.32767]",
+          "System.Security.AccessControl": "(,6.0.32767]",
+          "System.Security.Claims": "(,4.3.32767]",
+          "System.Security.Cryptography.Algorithms": "(,4.3.32767]",
+          "System.Security.Cryptography.Cng": "(,5.0.32767]",
+          "System.Security.Cryptography.Csp": "(,4.3.32767]",
+          "System.Security.Cryptography.Encoding": "(,4.3.32767]",
+          "System.Security.Cryptography.OpenSsl": "(,5.0.32767]",
+          "System.Security.Cryptography.Primitives": "(,4.3.32767]",
+          "System.Security.Cryptography.X509Certificates": "(,4.3.32767]",
+          "System.Security.Cryptography.Xml": "(,10.0.32767]",
+          "System.Security.Principal": "(,4.3.32767]",
+          "System.Security.Principal.Windows": "(,5.0.32767]",
+          "System.Security.SecureString": "(,4.3.32767]",
+          "System.Text.Encoding": "(,4.3.32767]",
+          "System.Text.Encoding.CodePages": "(,10.0.32767]",
+          "System.Text.Encoding.Extensions": "(,4.3.32767]",
+          "System.Text.Encodings.Web": "(,10.0.32767]",
+          "System.Text.Json": "(,10.0.32767]",
+          "System.Text.RegularExpressions": "(,4.3.32767]",
+          "System.Threading": "(,4.3.32767]",
+          "System.Threading.AccessControl": "(,10.0.32767]",
+          "System.Threading.Channels": "(,10.0.32767]",
+          "System.Threading.Overlapped": "(,4.3.32767]",
+          "System.Threading.RateLimiting": "(,10.0.32767]",
+          "System.Threading.Tasks": "(,4.3.32767]",
+          "System.Threading.Tasks.Dataflow": "(,10.0.32767]",
+          "System.Threading.Tasks.Extensions": "(,5.0.32767]",
+          "System.Threading.Tasks.Parallel": "(,4.3.32767]",
+          "System.Threading.Thread": "(,4.3.32767]",
+          "System.Threading.ThreadPool": "(,4.3.32767]",
+          "System.Threading.Timer": "(,4.3.32767]",
+          "System.ValueTuple": "(,4.5.32767]",
+          "System.Xml.ReaderWriter": "(,4.3.32767]",
+          "System.Xml.XDocument": "(,4.3.32767]",
+          "System.Xml.XmlDocument": "(,4.3.32767]",
+          "System.Xml.XmlSerializer": "(,4.3.32767]",
+          "System.Xml.XPath": "(,4.3.32767]",
+          "System.Xml.XPath.XDocument": "(,5.0.32767]"
+        }
+      }
+    }
+  }
+}
+
+obj/project.nuget.cache
+{
+  "version": 2,
+  "dgSpecHash": "J0aonVr/A7w=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\relax\\Documents\\my-project\\CampusRouteLab.csproj",
+  "expectedPackageFiles": [],
+  "logs": []
+}
+
+obj/Debug/net10.0/.NETCoreApp,Version=v10.0.AssemblyAttributes.cs
+// <autogenerated />
+using System;
+using System.Reflection;
+[assembly: global::System.Runtime.Versioning.TargetFrameworkAttribute(".NETCoreApp,Version=v10.0", FrameworkDisplayName = ".NET 10.0")]
+
+
+obj/Debug/net10.0/apphost.exe
+[Binary or non-text file]
+
+
+obj/Debug/net10.0/CampusRouteLab.AssemblyInfo.cs
+//------------------------------------------------------------------------------
+// <auto-generated>
+//     This code was generated by a tool.
+//
+//     Changes to this file may cause incorrect behavior and will be lost if
+//     the code is regenerated.
+// </auto-generated>
+//------------------------------------------------------------------------------
+
+using System;
+using System.Reflection;
+
+[assembly: System.Reflection.AssemblyCompanyAttribute("CampusRouteLab")]
+[assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c3a55889e3a9b98b03f5f0425eeab43891659111")]
+[assembly: System.Reflection.AssemblyProductAttribute("CampusRouteLab")]
+[assembly: System.Reflection.AssemblyTitleAttribute("CampusRouteLab")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
+
+// Создано классом WriteCodeFragment MSBuild.
+
+
+
+obj/Debug/net10.0/CampusRouteLab.AssemblyInfoInputs.cache
+2a780963cae55cb38be0181d0cb3e5589ab2b7caf6446666b850ed3ae40c8f64
+
+
+obj/Debug/net10.0/CampusRouteLab.assets.cache
+[Binary or non-text file]
+
+
+obj/Debug/net10.0/CampusRouteLab.csproj.CoreCompileInputs.cache
+7000cbb847b37aaf3e8f62103c435cb32a12442ffc0235554da325f7fe762181
+
+
+obj/Debug/net10.0/CampusRouteLab.csproj.FileListAbsolute.txt
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\CampusRouteLab.staticwebassets.endpoints.json
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\CampusRouteLab.exe
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\CampusRouteLab.deps.json
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\CampusRouteLab.runtimeconfig.json
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\CampusRouteLab.dll
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\CampusRouteLab.pdb
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\rpswa.dswa.cache.json
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\CampusRouteLab.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\CampusRouteLab.AssemblyInfoInputs.cache
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\CampusRouteLab.AssemblyInfo.cs
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\CampusRouteLab.csproj.CoreCompileInputs.cache
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\CampusRouteLab.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\CampusRouteLab.sourcelink.json
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\rjimswa.dswa.cache.json
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\rjsmrazor.dswa.cache.json
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\rjsmcshtml.dswa.cache.json
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\scopedcss\bundle\CampusRouteLab.styles.css
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\staticwebassets.build.json
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\staticwebassets.build.json.cache
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\staticwebassets.development.json
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\staticwebassets.build.endpoints.json
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\swae.build.ex.cache
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\CampusRouteLab.dll
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\refint\CampusRouteLab.dll
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\CampusRouteLab.pdb
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\CampusRouteLab.genruntimeconfig.cache
+C:\Users\relax\Documents\my-project\obj\Debug\net10.0\ref\CampusRouteLab.dll
+
+
+obj/Debug/net10.0/CampusRouteLab.dll
+[Binary or non-text file]
+
+
+obj/Debug/net10.0/CampusRouteLab.GeneratedMSBuildEditorConfig.editorconfig
+is_global = true
+build_property.TargetFramework = net10.0
+build_property.TargetFrameworkIdentifier = .NETCoreApp
+build_property.TargetFrameworkVersion = v10.0
+build_property.TargetPlatformMinVersion = 
+build_property.UsingMicrosoftNETSdkWeb = true
+build_property.ProjectTypeGuids = 
+build_property.InvariantGlobalization = 
+build_property.PlatformNeutralAssembly = 
+build_property.EnforceExtendedAnalyzerRules = 
+build_property._SupportedPlatformList = Linux,macOS,Windows
+build_property.RootNamespace = CampusRouteLab
+build_property.RootNamespace = CampusRouteLab
+build_property.ProjectDir = C:\Users\relax\Documents\my-project\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
+build_property.RazorLangVersion = 9.0
+build_property.SupportLocalizedComponentNames = 
+build_property.GenerateRazorMetadataSourceChecksumAttributes = 
+build_property.MSBuildProjectDirectory = C:\Users\relax\Documents\my-project
+build_property._RazorSourceGeneratorDebug = 
+build_property.EffectiveAnalysisLevelStyle = 10.0
+build_property.EnableCodeStyleSeverity = 
+
+
+obj/Debug/net10.0/CampusRouteLab.genruntimeconfig.cache
+a557b104c2f561a578a35f2b716488e32a3baa71986d66f82016a7efc3cad437
+
+
+obj/Debug/net10.0/CampusRouteLab.GlobalUsings.g.cs
+// <auto-generated/>
+global using Microsoft.AspNetCore.Builder;
+global using Microsoft.AspNetCore.Hosting;
+global using Microsoft.AspNetCore.Http;
+global using Microsoft.AspNetCore.Routing;
+global using Microsoft.Extensions.Configuration;
+global using Microsoft.Extensions.DependencyInjection;
+global using Microsoft.Extensions.Hosting;
+global using Microsoft.Extensions.Logging;
+global using System;
+global using System.Collections.Generic;
+global using System.IO;
+global using System.Linq;
+global using System.Net.Http;
+global using System.Net.Http.Json;
+global using System.Threading;
+global using System.Threading.Tasks;
+
+
+obj/Debug/net10.0/CampusRouteLab.MvcApplicationPartsAssemblyInfo.cache
+
+
+obj/Debug/net10.0/CampusRouteLab.pdb
+[Binary or non-text file]
+
+
+obj/Debug/net10.0/CampusRouteLab.sourcelink.json
+{"documents":{"C:\\Users\\relax\\Documents\\my-project\\*":"https://raw.githubusercontent.com/Relax1205/my-project/c3a55889e3a9b98b03f5f0425eeab43891659111/*"}}
+
+obj/Debug/net10.0/rjsmcshtml.dswa.cache.json
+{"GlobalPropertiesHash":"noEus2Rl8kJC6GfkxAyzPnLZY714xvLIRFD6qgqkF0Q=","FingerprintPatternsHash":"gq3WsqcKBUGTSNle7RKKyXRIwh7M8ccEqOqYvIzoM04=","PropertyOverridesHash":"8ZRc1sGeVrPBx4lD717BgRaQekyh78QKV9SKsdt638U=","InputHashes":["7uLYE\u002B7DT5pDL780hhM7FX6mYYSDtgsZdenmrUvQ43o=","ivqKOdke2iZa/6SgYw7sOVJ3Z6pordqpU4fPzZnIDvc=","oS3ZokZ8FVNCjLDSNv3UzqhUCZRv6BuaO/umcFIkR6A=","gkrYRgHDSQEXchJaLxdXAj88nBQXgMlLHfUZBQJGUD4=","f60RrqTBAvFUd/0kRbm4xUwwrEBEHzHwR1UYti2ULoM="],"CachedAssets":{},"CachedCopyCandidates":{}}
+
+obj/Debug/net10.0/rjsmrazor.dswa.cache.json
+{"GlobalPropertiesHash":"F0Q2XsNb83N4P6EWcLTimzpucpZS8x+dp9u9S5UxZ+I=","FingerprintPatternsHash":"gq3WsqcKBUGTSNle7RKKyXRIwh7M8ccEqOqYvIzoM04=","PropertyOverridesHash":"8ZRc1sGeVrPBx4lD717BgRaQekyh78QKV9SKsdt638U=","InputHashes":["7uLYE\u002B7DT5pDL780hhM7FX6mYYSDtgsZdenmrUvQ43o=","ivqKOdke2iZa/6SgYw7sOVJ3Z6pordqpU4fPzZnIDvc=","oS3ZokZ8FVNCjLDSNv3UzqhUCZRv6BuaO/umcFIkR6A=","gkrYRgHDSQEXchJaLxdXAj88nBQXgMlLHfUZBQJGUD4=","f60RrqTBAvFUd/0kRbm4xUwwrEBEHzHwR1UYti2ULoM="],"CachedAssets":{},"CachedCopyCandidates":{}}
+
+obj/Debug/net10.0/staticwebassets.build.endpoints.json
+{"Version":1,"ManifestType":"Build","Endpoints":[]}
+
+obj/Debug/net10.0/staticwebassets.build.json
+{"Version":1,"Hash":"WEwx8UkrNb7BtqcwjPST6a3ZuYgliD+ZzYHVkZv5juw=","Source":"CampusRouteLab","BasePath":"/","Mode":"Root","ManifestType":"Build","ReferencedProjectsConfiguration":[],"DiscoveryPatterns":[],"Assets":[],"Endpoints":[]}
+
+obj/Debug/net10.0/staticwebassets.build.json.cache
+WEwx8UkrNb7BtqcwjPST6a3ZuYgliD+ZzYHVkZv5juw=
+
+obj/Debug/net10.0/swae.build.ex.cache
+
+
+obj/Debug/net10.0/ref/CampusRouteLab.dll
+[Binary or non-text file]
+
+
+obj/Debug/net10.0/refint/CampusRouteLab.dll
+[Binary or non-text file]
+
+
+Services/DiagnosticsReportService.cs
+namespace CampusRouteLab.Services;
+
+using CampusRouteLab.Services.Interfaces;
+
+/// <summary>
+/// Композитный сервис для сбора диагностического отчёта
+/// ✅ Демонстрация инъекции зависимостей через конструктор
+/// </summary>
+public class DiagnosticsReportService
+{
+    private readonly IAppInfoService _appInfo;
+    private readonly IRequestContextService _requestContext;
+    private readonly ITransientMarkerService _transient;
+    
+    public DiagnosticsReportService(
+        IAppInfoService appInfo,
+        IRequestContextService requestContext,
+        ITransientMarkerService transient)
+    {
+        _appInfo = appInfo;
+        _requestContext = requestContext;
+        _transient = transient;
+    }
+    
+    public LifetimeReport GetLifetimeReport()
+    {
+        return new LifetimeReport
+        {
+            SingletonAppId = _appInfo.AppInstanceId,
+            ScopedRequestId = _requestContext.RequestId,
+            TransientMarkerId = _transient.MarkerId,
+            Source = "DiagnosticsReportService",
+            GeneratedAt = DateTime.Now
+        };
+    }
+}
+
+/// <summary>
+/// Модель отчёта о жизненном цикле
+/// </summary>
+public class LifetimeReport
+{
+    public Guid SingletonAppId { get; set; }
+    public Guid ScopedRequestId { get; set; }
+    public Guid TransientMarkerId { get; set; }
+    public string Source { get; set; } = string.Empty;
+    public DateTime GeneratedAt { get; set; }
+}
+
+Services/Implementations/AppInfoService.cs
+namespace CampusRouteLab.Services.Implementations;
+
+using CampusRouteLab.Services.Interfaces;
+
+/// <summary>
+/// Singleton-сервис: информация о приложении
+/// Создаётся один раз при запуске приложения
+/// </summary>
+public class AppInfoService : IAppInfoService
+{
+    public Guid AppInstanceId { get; } = Guid.NewGuid();
+    public DateTime StartedAt { get; } = DateTime.Now;
+}
+
+Services/Implementations/RequestContextService.cs
+namespace CampusRouteLab.Services.Implementations;
+
+using CampusRouteLab.Services.Interfaces;
+
+/// <summary>
+/// Scoped-сервис: информация о текущем запросе
+/// Создаётся заново для каждого HTTP-запроса
+/// </summary>
+public class RequestContextService : IRequestContextService
+{
+    public Guid RequestId { get; } = Guid.NewGuid();
+    public DateTime CreatedAt { get; } = DateTime.Now;
+}
+
+Services/Implementations/StudentCatalogService.cs
+namespace CampusRouteLab.Services.Implementations;
+
+using CampusRouteLab.Models;
+using CampusRouteLab.Services.Interfaces;
+
+/// <summary>
+/// Singleton-сервис: каталог студентов и групп
+/// Хранит тестовые данные в памяти приложения
+/// </summary>
+public class StudentCatalogService : IStudentCatalogService
+{
+    private readonly List<GroupInfo> _groups;
+    
+    public StudentCatalogService()
+    {
+        _groups = new List<GroupInfo>
+        {
+            new GroupInfo("IKBO-01-22", 3, new List<Student> {
+                new Student(1, "Иванов", "IKBO-01-22"),
+                new Student(2, "Петров", "IKBO-01-22"),
+                new Student(3, "Сидоров", "IKBO-01-22")
+            }),
+            new GroupInfo("IKBO-02-22", 2, new List<Student> {
+                new Student(1, "Смирнов", "IKBO-02-22"),
+                new Student(2, "Кузнецов", "IKBO-02-22")
+            })
+        };
+    }
+    
+    public List<GroupInfo> GetAllGroups() => _groups;
+    
+    public GroupInfo? GetGroupByName(string name) => 
+        _groups.FirstOrDefault(g => g.Name == name);
+    
+    public Student? GetStudent(string group, int id) =>
+        _groups.FirstOrDefault(g => g.Name == group)
+            ?.Students.FirstOrDefault(s => s.Id == id);
+}
+
+Services/Implementations/TransientMarkerService.cs
+namespace CampusRouteLab.Services.Implementations;
+
+using CampusRouteLab.Services.Interfaces;
+
+/// <summary>
+/// Transient-сервис: маркер для демонстрации жизненного цикла
+/// Создаётся новый экземпляр при каждом запросе зависимости
+/// </summary>
+public class TransientMarkerService : ITransientMarkerService
+{
+    public Guid MarkerId { get; } = Guid.NewGuid();
+}
+
+Services/Interfaces/IAppInfoService.cs
+namespace CampusRouteLab.Services.Interfaces;
+
+public interface IAppInfoService
+{
+    Guid AppInstanceId { get; }
+    DateTime StartedAt { get; }
+}
+
+Services/Interfaces/IRequestContextService.cs
+namespace CampusRouteLab.Services.Interfaces;
+
+public interface IRequestContextService
+{
+    Guid RequestId { get; }
+    DateTime CreatedAt { get; }
+}
+
+Services/Interfaces/IStudentCatalogService.cs
+namespace CampusRouteLab.Services.Interfaces;
+
+using CampusRouteLab.Models;
+
+public interface IStudentCatalogService
+{
+    List<GroupInfo> GetAllGroups();
+    GroupInfo? GetGroupByName(string name);
+    Student? GetStudent(string group, int id);
+}
+
+Services/Interfaces/ITransientMarkerService.cs
+namespace CampusRouteLab.Services.Interfaces;
+
+public interface ITransientMarkerService
+{
+    Guid MarkerId { get; }
+}
+

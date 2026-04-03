@@ -1,30 +1,22 @@
-using StudentPortal.Diagnostics.Services;
-using Microsoft.Extensions.DependencyInjection;
+namespace CampusRouteLab.Extensions;
 
-namespace StudentPortal.Diagnostics.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using CampusRouteLab.Services.Interfaces;
+using CampusRouteLab.Services.Implementations;
+using CampusRouteLab.Services;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddStudentPortalServices(this IServiceCollection services)
+    public static IServiceCollection AddCampusServices(this IServiceCollection services)
     {
-        services.AddSingleton<IDateTimeService, DateTimeService>();
-        services.AddSingleton<IEnvironmentReportService, EnvironmentReportService>();
+        services.AddSingleton<IAppInfoService, AppInfoService>();
+        services.AddSingleton<IStudentCatalogService, StudentCatalogService>();
         
-        var registryInfo = new ServiceRegistryInfo();
-        services.AddSingleton(registryInfo);
-
-        registryInfo.TotalCount = services.Count; 
-        registryInfo.ServiceDescriptions.Add("IDateTimeService -> DateTimeService (Singleton)");
-        registryInfo.ServiceDescriptions.Add("IEnvironmentReportService -> EnvironmentReportService (Singleton)");
-        registryInfo.ServiceDescriptions.Add("ServiceRegistryInfo (Singleton)");
-        registryInfo.ServiceDescriptions.Add("IWebHostEnvironment (Built-in)");
-        registryInfo.ServiceDescriptions.Add("ILogger<Program> (Built-in)");
-        registryInfo.ServiceDescriptions.Add("IHttpContextAccessor (Built-in)");
-        registryInfo.ServiceDescriptions.Add("OptionsMonitor<...> (Built-in)");
-        registryInfo.ServiceDescriptions.Add("HttpClient (Built-in)");
-        registryInfo.ServiceDescriptions.Add("AuthorizationService (Built-in)");
-        registryInfo.ServiceDescriptions.Add("AuthenticationService (Built-in)");
-
+        services.AddScoped<IRequestContextService, RequestContextService>();
+        
+        services.AddTransient<ITransientMarkerService, TransientMarkerService>();
+        services.AddTransient<DiagnosticsReportService>();
+        
         return services;
     }
 }
