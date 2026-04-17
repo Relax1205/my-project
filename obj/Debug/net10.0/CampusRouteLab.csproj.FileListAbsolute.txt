@@ -1,3 +1,8 @@
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\appsettings.Development.json
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\appsettings.json
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\portal.xml
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\notifications.ini
+C:\Users\relax\Documents\my-project\bin\Debug\net10.0\customsettings.txt
 C:\Users\relax\Documents\my-project\bin\Debug\net10.0\CampusRouteLab.staticwebassets.endpoints.json
 C:\Users\relax\Documents\my-project\bin\Debug\net10.0\CampusRouteLab.exe
 C:\Users\relax\Documents\my-project\bin\Debug\net10.0\CampusRouteLab.deps.json

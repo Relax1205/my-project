@@ -1,22 +1,16 @@
-namespace CampusRouteLab.Extensions;
+using CampusRouteLab.Models;
 
-using Microsoft.Extensions.DependencyInjection;
-using CampusRouteLab.Services.Interfaces;
-using CampusRouteLab.Services.Implementations;
-using CampusRouteLab.Services;
+namespace CampusRouteLab.Extensions;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddCampusServices(this IServiceCollection services)
+    public static IServiceCollection AddConfigCenterServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
-        services.AddSingleton<IAppInfoService, AppInfoService>();
-        services.AddSingleton<IStudentCatalogService, StudentCatalogService>();
-        
-        services.AddScoped<IRequestContextService, RequestContextService>();
-        
-        services.AddTransient<ITransientMarkerService, TransientMarkerService>();
-        services.AddTransient<DiagnosticsReportService>();
-        
+        services.Configure<PortalOptions>(configuration.GetSection("Portal"));
+        services.Configure<NotificationOptions>(configuration.GetSection("Notifications"));
+
         return services;
     }
 }

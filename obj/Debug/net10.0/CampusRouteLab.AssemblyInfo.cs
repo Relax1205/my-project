@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CampusRouteLab")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c3a55889e3a9b98b03f5f0425eeab43891659111")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2306dade2529de669f6ee3a8139cbd85188c6cb9")]
 [assembly: System.Reflection.AssemblyProductAttribute("CampusRouteLab")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CampusRouteLab")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
