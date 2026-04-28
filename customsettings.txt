@@ -1,9 +1,0 @@
-# Key on one line, value on the next one.
-Portal:Semester
-Autumn 2026
-CustomText:DataCenter
-North Wing, room 214
-CustomText:Announcement
-Configuration diagnostics are enabled
-FeatureFlags:CustomBanner
-true

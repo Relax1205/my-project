@@ -1,15 +1,12 @@
 {
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
-    "CampusRouteLab": {
+    "HelpDesk.Results": {
       "commandName": "Project",
       "launchBrowser": false,
       "applicationUrl": "http://localhost:5187",
-      "commandLineArgs": "--Portal:Title=CampusHub.ConfigCenter.CLI --FeatureFlags:FromCommandLine=true",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "Portal__SupportEmail": "config-support-env@campus.local",
-        "FeatureFlags__FromEnvironment": "true"
+        "ASPNETCORE_ENVIRONMENT": "Production"
       }
     }
   }
